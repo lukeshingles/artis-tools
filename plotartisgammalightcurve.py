@@ -7,14 +7,13 @@ import numpy as np
 import glob
 
 def main():
-    lcfiles = glob.glob('light_curve.out') + glob.glob('*/light_curve.out') + glob.glob('*/*/light_curve.out')
+    lcfiles = glob.glob('gamma_light_curve.out') + glob.glob('*/gamma_light_curve.out') + glob.glob('*/*/gamma_light_curve.out')
     #could alternatively use
-    #specfiles = glob.glob('**/spec.out',recursive=True)
-    #but this might
-    #be very slow if called from the wrong place
+    #specfiles = glob.glob('**/gamma_light_curve',recursive=True)
+    #but this might be very slow if called from the wrong place
     
     if len(lcfiles) == 0:
-        print('no light_curve.out files found')
+        print('no gamma_light_curve.out files found')
         sys.exit()
     else:
         makeplot(lcfiles)
@@ -28,9 +27,8 @@ def makeplot(lcfiles):
 
     for n in range(len(lcfiles)):
         lightcurvedata = np.loadtxt(lcfiles[n])
-        #lightcurvedata = pd.read_csv(lcfiles[n], delim_whitespace=True)  #maybe switch to Pandas at some point
 
-        linelabel = '{0}'.format(lcfiles[n].split('/light_curve.out')[0])
+        linelabel = '{0}'.format(lcfiles[n].split('/gamma_light_curve.out')[0])
 
         arraytime = lightcurvedata[:,0]
 
@@ -45,9 +43,15 @@ def makeplot(lcfiles):
 
     ax.legend(loc='best',handlelength=2,frameon=False,numpoints=1,prop={'size':9})
     ax.set_xlabel(r'Time (days)')
+    #ax.xaxis.set_minor_locator(ticker.MultipleLocator(base=5))
     ax.set_ylabel(r'$\propto$ Flux')
 
-    fig.savefig('plotartislightcurve.pdf',format='pdf')
+    fig.savefig('plotartisgammalightcurve.pdf',format='pdf')
     plt.close()
+
+    #plt.setp(plt.getp(ax, 'xticklabels'), fontsize=fsticklabel)
+    #plt.setp(plt.getp(ax, 'yticklabels'), fontsize=fsticklabel)
+    #for axis in ['top','bottom','left','right']:
+    #    ax.spines[axis].set_linewidth(framewidth)
 
 main()

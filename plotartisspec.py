@@ -2,10 +2,9 @@
 import os
 import sys
 import math
-import struct
 import scipy.signal
 import numpy as np
-import pandas as pd
+#import pandas as pd
 import glob
 
 xminvalue, xmaxvalue = 3500, 7000
@@ -50,18 +49,6 @@ def makeplot():
     import matplotlib.ticker as ticker
     fig, ax = plt.subplots(1, 1, sharey=True, figsize=(8,5), tight_layout={"pad":0.2,"w_pad":0.0,"h_pad":0.0})
 
-    dir = os.path.dirname(os.path.abspath(__file__))
-    obsspectra = [('dop_dered_SN2013aa_20140208_fc_final.txt','SN2013aa +360d (Maguire)','grey'),
-                  ('2010lp_20110928_fors2.txt','SN2010lp +264d (Taubenberger et al. 2013)','black')]
-
-    for (filename, serieslabel, linecolor) in obsspectra:
-      obsfile = os.path.join(dir, 'spectra',filename)
-      obsdata = np.loadtxt(obsfile)
-      obsdata = obsdata[(obsdata[:,0] > xminvalue) & (obsdata[:,0] < xmaxvalue)]
-      obsyvalues = obsdata[:,1] * (1.0 / max(obsdata[:,1]))
-      obsyvalues = scipy.signal.savgol_filter(obsyvalues, 31, 3)
-      ax.plot(obsdata[:,0], obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
-
     timesteparray = list(map(lambda x: int(x), sys.argv[1].split('-')))
 
     #in the spec.out file, the column index is one more than the timestep (because column 0 is wavelengths, not flux)
@@ -97,7 +84,20 @@ def makeplot():
 
         maxyvaluethisseries = max([arrayFlambda[i] if (xminvalue < 1e10 * arraylambda[i] < xmaxvalue) else -99.0 for i in range(len(arrayFlambda))])
 
-        ax.plot(1e10 * arraylambda, arrayFlambda/maxyvaluethisseries, lw=1.5-(0.1*s), label=linelabel)
+        linestyle = ['-','--'][int(s / 7)]
+        ax.plot(1e10 * arraylambda, arrayFlambda/maxyvaluethisseries, linestyle=linestyle, lw=1.5-(0.1*s), label=linelabel)
+
+    dir = os.path.dirname(os.path.abspath(__file__))
+    obsspectra = [('dop_dered_SN2013aa_20140208_fc_final.txt','SN2013aa +360d (Maguire)','0.3'),
+                ('2010lp_20110928_fors2.txt','SN2010lp +264d (Taubenberger et al. 2013)','0.1')]
+
+    for (filename, serieslabel, linecolor) in obsspectra:
+      obsfile = os.path.join(dir, 'spectra',filename)
+      obsdata = np.loadtxt(obsfile)
+      obsdata = obsdata[(obsdata[:,0] > xminvalue) & (obsdata[:,0] < xmaxvalue)]
+      obsyvalues = obsdata[:,1] * (1.0 / max(obsdata[:,1]))
+      obsyvalues = scipy.signal.savgol_filter(obsyvalues, 31, 3)
+      ax.plot(obsdata[:,0], obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
 
     ax.set_xlim(xmin=xminvalue,xmax=xmaxvalue)
     #        ax.set_xlim(xmin=12000,xmax=19000)
@@ -109,7 +109,9 @@ def makeplot():
     #ax.xaxis.set_minor_locator(ticker.MultipleLocator(base=5))
     ax.set_ylabel(r'F$_\lambda$')
 
-    fig.savefig('plotartisspec.pdf',format='pdf')
+    filenameout = 'plotartisspec_{:}_to_{:}.pdf'.format(*timesteparray)
+    fig.savefig(filenameout,format='pdf')
+    print('Saving {:}'.format(filenameout))
     plt.close()
 
     #plt.setp(plt.getp(ax, 'xticklabels'), fontsize=fsticklabel)
