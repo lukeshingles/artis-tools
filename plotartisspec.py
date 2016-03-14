@@ -49,6 +49,18 @@ def makeplot():
     import matplotlib.ticker as ticker
     fig, ax = plt.subplots(1, 1, sharey=True, figsize=(8,5), tight_layout={"pad":0.2,"w_pad":0.0,"h_pad":0.0})
 
+    dir = os.path.dirname(os.path.abspath(__file__))
+    obsspectra = [('dop_dered_SN2013aa_20140208_fc_final.txt','SN2013aa +360d (Maguire)','0.3'),
+                ('2010lp_20110928_fors2.txt','SN2010lp +264d (Taubenberger et al. 2013)','0.1')]
+
+    for (filename, serieslabel, linecolor) in obsspectra:
+      obsfile = os.path.join(dir, 'spectra',filename)
+      obsdata = np.loadtxt(obsfile)
+      obsdata = obsdata[(obsdata[:,0] > xminvalue) & (obsdata[:,0] < xmaxvalue)]
+      obsyvalues = obsdata[:,1] * (1.0 / max(obsdata[:,1]))
+      obsyvalues = scipy.signal.savgol_filter(obsyvalues, 31, 3)
+      ax.plot(obsdata[:,0], obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
+
     timesteparray = list(map(lambda x: int(x), sys.argv[1].split('-')))
 
     #in the spec.out file, the column index is one more than the timestep (because column 0 is wavelengths, not flux)
@@ -87,29 +99,18 @@ def makeplot():
         linestyle = ['-','--'][int(s / 7)]
         ax.plot(1e10 * arraylambda, arrayFlambda/maxyvaluethisseries, linestyle=linestyle, lw=1.5-(0.1*s), label=linelabel)
 
-    dir = os.path.dirname(os.path.abspath(__file__))
-    obsspectra = [('dop_dered_SN2013aa_20140208_fc_final.txt','SN2013aa +360d (Maguire)','0.3'),
-                ('2010lp_20110928_fors2.txt','SN2010lp +264d (Taubenberger et al. 2013)','0.1')]
-
-    for (filename, serieslabel, linecolor) in obsspectra:
-      obsfile = os.path.join(dir, 'spectra',filename)
-      obsdata = np.loadtxt(obsfile)
-      obsdata = obsdata[(obsdata[:,0] > xminvalue) & (obsdata[:,0] < xmaxvalue)]
-      obsyvalues = obsdata[:,1] * (1.0 / max(obsdata[:,1]))
-      obsyvalues = scipy.signal.savgol_filter(obsyvalues, 31, 3)
-      ax.plot(obsdata[:,0], obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
-
     ax.set_xlim(xmin=xminvalue,xmax=xmaxvalue)
     #        ax.set_xlim(xmin=12000,xmax=19000)
     #ax.set_ylim(ymin=-0.1*maxyvalueglbal,ymax=maxyvalueglobal*1.1)
-    ax.set_ylim(ymin=-0.1,ymax=1.3)
+    ax.set_ylim(ymin=-0.1,ymax=1.4)
 
-    ax.legend(loc='best',handlelength=2,frameon=False,numpoints=1,prop={'size':9})
+    ax.legend(loc='best',handlelength=2,frameon=False,numpoints=1,prop={'size': 8})
     ax.set_xlabel(r'Wavelength ($\AA$)')
     #ax.xaxis.set_minor_locator(ticker.MultipleLocator(base=5))
     ax.set_ylabel(r'F$_\lambda$')
 
-    filenameout = 'plotartisspec_{:}_to_{:}.pdf'.format(*timesteparray)
+    #filenameout = 'plotartisspec_{:}_to_{:}.pdf'.format(*timesteparray)
+    filenameout = 'plotartisspec.pdf'
     fig.savefig(filenameout,format='pdf')
     print('Saving {:}'.format(filenameout))
     plt.close()
