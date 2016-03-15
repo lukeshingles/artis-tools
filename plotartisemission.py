@@ -2,6 +2,7 @@
 import os
 import sys
 import math
+import collections
 import scipy.signal
 import numpy as np
 import pandas as pd
@@ -56,22 +57,24 @@ def makeplot():
     matplotlib.use('PDF')
     import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
-
+    elementtuple = collections.namedtuple('elementtuple','Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin,abundance,mass')
     with open(specfiles[0].replace('spec.out','compositiondata.txt'),'r') as fcompdata:
         nelements = int(fcompdata.readline())
         fcompdata.readline() #T_preset
         fcompdata.readline() #homogeneous_abundances
         for element in range(nelements):
             line = fcompdata.readline()
-            (Z,nions,lowermost_ionstage,uppermost_ionstage,nlevelsmax_readin,abundance,mass) = line.split()
-            elementlist.append(int(Z))
+            linesplit = line.split()
+            elementlist.append(elementtuple._make(list(map(int,linesplit[:5]))+list(map(float,linesplit[5:]))))
+            print(elementlist[-1])
+
     print('nelements {}'.format(nelements))
     maxion = 5
 
     selectedcolumn = 0 #very important! fix this later
     fig, ax = plt.subplots(1, 1, sharey=True, figsize=(8,5), tight_layout={"pad":0.2,"w_pad":0.0,"h_pad":0.0})
 
-    timesteparray = list(map(lambda x: int(x), sys.argv[1].split('-')))
+    timesteparray = list(map(int, sys.argv[1].split('-')))
 
     #in the spec.out file, the column index is one more than the timestep (because column 0 is wavelengths, not flux)
     if len(timesteparray) == 1:
@@ -89,15 +92,16 @@ def makeplot():
     arraylambda = c / specdata[1:,0]
 
     maxyvalueglobal = 0.0
-    seriesnumber = 0
+    linenumber = 0
     for element in reversed(range(nelements)):
-        nionsdisplayeddict = {8: 3, 26: 5}
-        nions = nionsdisplayeddict[elementlist[element]]
+        #nions = elementlist[element].nions
+        nions = elementlist[element].uppermost_ionstage - elementlist[element].lowermost_ionstage + 1
         for ion in range(nions):
+            ion_stage = ion + elementlist[element].lowermost_ionstage
             ionserieslist = []
-            if seriesnumber == 0:
+            if linenumber == 0:
                 ionserieslist.append( (2*nelements*maxion,'ff') )
-                seriesnumber += 1 #so the linestyle resets
+                linenumber += 1 #so the linestyle resets
             ionserieslist.append( (element*maxion+ion,'bb') )
             ionserieslist.append( (nelements*maxion + element*maxion+ion,'bf') )
             for (selectedcolumn,emissiontype) in ionserieslist:
@@ -118,13 +122,13 @@ def makeplot():
 
                 linelabel = ''
                 if emissiontype != 'ff':
-                    linelabel += '{:} {:} '.format(elsymbols[elementlist[element]],roman_numerals[ion+1])
+                    linelabel += '{:} {:} '.format(elsymbols[elementlist[element].Z],roman_numerals[ion_stage])
                 linelabel += '{:} at t={:}d'.format(emissiontype,specdata[0,timeindexlow])
                 if timeindexhigh > timeindexlow:
                     linelabel += ' to {0}d'.format(specdata[0,timeindexhigh])
                 linewidth = [1.8,0.8][emissiontype=='bf']
-                ax.plot(1e10 * arraylambda, arrayFlambda, color=colorlist[int(seriesnumber/2) % len(colorlist)], lw=linewidth, label=linelabel)
-                seriesnumber += 1
+                ax.plot(1e10 * arraylambda, arrayFlambda, color=colorlist[int(linenumber/2) % len(colorlist)], lw=linewidth, label=linelabel)
+                linenumber += 1
 
     ax.set_xlim(xmin=xminvalue,xmax=xmaxvalue)
     #        ax.set_xlim(xmin=12000,xmax=19000)

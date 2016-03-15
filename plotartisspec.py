@@ -50,7 +50,7 @@ def makeplot():
     fig, ax = plt.subplots(1, 1, sharey=True, figsize=(8,5), tight_layout={"pad":0.2,"w_pad":0.0,"h_pad":0.0})
 
     dir = os.path.dirname(os.path.abspath(__file__))
-    obsspectra = [('dop_dered_SN2013aa_20140208_fc_final.txt','SN2013aa +360d (Maguire)','0.3'),
+    obsspectra = [('dop_dered_SN2013aa_20140208_fc_final.txt','SN2013aa +360d (Maguire et al. in prep)','0.3'),
                 ('2010lp_20110928_fors2.txt','SN2010lp +264d (Taubenberger et al. 2013)','0.1')]
 
     for (filename, serieslabel, linecolor) in obsspectra:
@@ -61,7 +61,7 @@ def makeplot():
       obsyvalues = scipy.signal.savgol_filter(obsyvalues, 31, 3)
       ax.plot(obsdata[:,0], obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
 
-    timesteparray = list(map(lambda x: int(x), sys.argv[1].split('-')))
+    timesteparray = list(map(int, sys.argv[1].split('-')))
 
     #in the spec.out file, the column index is one more than the timestep (because column 0 is wavelengths, not flux)
     if len(timesteparray) == 1:
