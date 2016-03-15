@@ -84,7 +84,7 @@ def makeplot():
 
         arrayFnu = specdata[1:,timeindexlow]
 
-        for timeindex in range(timeindexlow,timeindexhigh+1):
+        for timeindex in range(timeindexlow+1,timeindexhigh+1):
             arrayFnu += specdata[1:,timeindex]
 
         arrayFnu = arrayFnu / (timeindexhigh - timeindexlow + 1)
