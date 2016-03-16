@@ -4,19 +4,37 @@ import sys
 import math
 import scipy.signal
 import numpy as np
-#import pandas as pd
+import pandas as pd
 import glob
+import argparse
 
-xminvalue, xmaxvalue = 3500, 7000
+parser = argparse.ArgumentParser(description='Plot artis model spectra by finding spec.out files in the current directory or subdirectories.')
+parser.add_argument('-specpath', action='store', default='**/spec.out',
+                    help='Path to spec.out file (may include wildcards such as * and **)')
+parser.add_argument('-listtimesteps', action='store_true', default=False,
+                    help='Show the times at each timestep')
+parser.add_argument('-timestepmin', type=int, default=70,
+                    help='First or only included timestep')
+parser.add_argument('-timestepmax', type=int, default=80,
+                    help='Last included timestep')
+parser.add_argument('-xmin', type=int, default=3500,
+                    help='Plot range: minimum wavelength')
+parser.add_argument('-xmax', type=int, default=7000,
+                    help='Plot range: maximum wavelength')
+parser.add_argument('-obsspec', action='append', dest='obsspecfiles',
+                    help='Include observational spectrum with this file name')
+args = parser.parse_args()
+
+xminvalue, xmaxvalue = args.xmin, args.xmax
 #xminvalue, xmaxvalue = 10000, 20000
 
 numberofcolumns = 5
 h = 6.62607004e-34 #m^2 kg / s
 c = 299792458 #m / s
 
-specfiles = glob.glob('spec.out') + glob.glob('*/spec.out') + glob.glob('*/*/spec.out')
+#specfiles = glob.glob('spec.out') + glob.glob('*/spec.out') + glob.glob('*/*/spec.out')
 #could alternatively use
-#specfiles = glob.glob('**/spec.out',recursive=True)
+specfiles = glob.glob(args.specpath,recursive=True)
 #but this might
 #be very slow if called from the wrong place
 
@@ -24,9 +42,9 @@ def main():
     if len(specfiles) == 0:
         print('no spec.out files found')
         sys.exit()
-    if len(sys.argv) < 2:
+    if args.listtimesteps:
         specdata = pd.read_csv(specfiles[0], delim_whitespace=True)
-        print('Enter as a commandline argument the timestep for a given time in days (or a range, e.g., 50-100):\n')
+        print('Time steps and times in days:\n')
 
         times = specdata.columns
         indexendofcolumnone = math.ceil((len(times)-1) / numberofcolumns)
@@ -50,9 +68,11 @@ def makeplot():
     fig, ax = plt.subplots(1, 1, sharey=True, figsize=(8,5), tight_layout={"pad":0.2,"w_pad":0.0,"h_pad":0.0})
 
     dir = os.path.dirname(os.path.abspath(__file__))
-    obsspectra = [('dop_dered_SN2013aa_20140208_fc_final.txt','SN2013aa +360d (Maguire et al. in prep)','0.3'),
-                ('2010lp_20110928_fors2.txt','SN2010lp +264d (Taubenberger et al. 2013)','0.1')]
-
+    allobsspectra = {
+                     'dop_dered_SN2013aa_20140208_fc_final.txt':('SN2013aa +360d (Maguire et al. in prep)','0.3'),
+                     '2010lp_20110928_fors2.txt': ('SN2010lp +264d (Taubenberger et al. 2013)','0.1')
+                    }
+    obsspectra = [(fn,)+allobsspectra[fn] for fn in args.obsspecfiles]
     for (filename, serieslabel, linecolor) in obsspectra:
       obsfile = os.path.join(dir, 'spectra',filename)
       obsdata = np.loadtxt(obsfile)
@@ -61,15 +81,14 @@ def makeplot():
       obsyvalues = scipy.signal.savgol_filter(obsyvalues, 31, 3)
       ax.plot(obsdata[:,0], obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
 
-    timesteparray = list(map(int, sys.argv[1].split('-')))
-
-    #in the spec.out file, the column index is one more than the timestep (because column 0 is wavelengths, not flux)
-    if len(timesteparray) == 1:
-        timeindexlow = timesteparray[0]+1
-        timeindexhigh = timeindexlow
+    #in the spec.out file, the column index is one more than the timestep (because column 0 is wavelength row headers, not flux at a timestep)
+    timeindexlow = args.timestepmin+1
+    if args.timestepmax:
+        timeindexhigh = args.timestepmax+1
+        print('Ploting timesteps {} to {}'.format(args.timestepmin,args.timestepmax))
     else:
-        timeindexlow = timesteparray[0]+1
-        timeindexhigh = timesteparray[1]+1
+        print('Ploting timestep {}'.format(args.timestepmin))
+        timeindexhigh = timeindexlow
 
     for s in range(len(specfiles)):
         specdata = np.loadtxt(specfiles[s])
