@@ -100,10 +100,10 @@ def makeplot():
             ion_stage = ion + elementlist[element].lowermost_ionstage
             ionserieslist = []
             if linenumber == 0:
-                ionserieslist.append( (2*nelements*maxion,'ff') )
+                ionserieslist.append( (2*nelements*maxion,'free-free') )
                 linenumber += 1 #so the linestyle resets
-            ionserieslist.append( (element*maxion+ion,'bb') )
-            ionserieslist.append( (nelements*maxion + element*maxion+ion,'bf') )
+            ionserieslist.append( (element*maxion+ion,'bound-bound') )
+            ionserieslist.append( (nelements*maxion + element*maxion+ion,'bound-free') )
             for (selectedcolumn,emissiontype) in ionserieslist:
                 arrayFnu = emissiondata[timeindexlow::len(timearray),selectedcolumn]
 
@@ -121,21 +121,23 @@ def makeplot():
                 maxyvalueglobal = max(maxyvalueglobal,maxyvaluethisseries)
 
                 linelabel = ''
-                if emissiontype != 'ff':
+                if emissiontype != 'free-free':
                     linelabel += '{:} {:} '.format(elsymbols[elementlist[element].Z],roman_numerals[ion_stage])
-                linelabel += '{:} at t={:}d'.format(emissiontype,specdata[0,timeindexlow])
+                linelabel += '{:}'.format(emissiontype)
+                plotlabel = 't={}d'.format(specdata[0,timeindexlow])
                 if timeindexhigh > timeindexlow:
-                    linelabel += ' to {0}d'.format(specdata[0,timeindexhigh])
-                linewidth = [1.8,0.8][emissiontype=='bf']
+                    plotlabel += ' to {}d'.format(specdata[0,timeindexhigh])
+                linewidth = [1.8,0.8][emissiontype=='bound-free']
                 ax.plot(1e10 * arraylambda, arrayFlambda, color=colorlist[int(linenumber/2) % len(colorlist)], lw=linewidth, label=linelabel)
                 linenumber += 1
 
+    ax.annotate(plotlabel, xy=(0.5,0.96), xycoords='axes fraction', horizontalalignment='center', verticalalignment='top', fontsize=12)
     ax.set_xlim(xmin=xminvalue,xmax=xmaxvalue)
     #        ax.set_xlim(xmin=12000,xmax=19000)
     ax.set_ylim(ymin=-0.05*maxyvalueglobal,ymax=maxyvalueglobal*1.3)
     #ax.set_ylim(ymin=-0.1,ymax=1.4)
 
-    ax.legend(loc='best',handlelength=2,frameon=False,numpoints=1,prop={'size':8})
+    ax.legend(loc='best',handlelength=2,frameon=False,numpoints=1,prop={'size': 9})
     ax.set_xlabel(r'Wavelength ($\AA$)')
     #ax.xaxis.set_minor_locator(ticker.MultipleLocator(base=5))
     ax.set_ylabel(r'F$_\lambda$')
