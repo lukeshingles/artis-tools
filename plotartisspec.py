@@ -23,6 +23,8 @@ parser.add_argument('-xmax', type=int, default=7000,
                     help='Plot range: maximum wavelength')
 parser.add_argument('-obsspec', action='append', dest='obsspecfiles',
                     help='Include observational spectrum with this file name')
+parser.add_argument('-o', action='store', dest='outputfile', default='plotartisspec.pdf',
+                    help='path/filename for PDF file')
 args = parser.parse_args()
 
 xminvalue, xmaxvalue = args.xmin, args.xmax
@@ -43,20 +45,7 @@ def main():
         print('no spec.out files found')
         sys.exit()
     if args.listtimesteps:
-        specdata = pd.read_csv(specfiles[0], delim_whitespace=True)
-        print('Time steps and times in days:\n')
-
-        times = specdata.columns
-        indexendofcolumnone = math.ceil((len(times)-1) / numberofcolumns)
-        for rownum in range(0,indexendofcolumnone):
-            strline = ""
-            for colnum in range(numberofcolumns):
-                if colnum > 0:
-                    strline += '\t'
-                newindex = rownum + colnum*indexendofcolumnone
-                if newindex < len(times):
-                    strline += '{:4d}: {:.3f}'.format(newindex,float(times[newindex+1]))
-            print(strline)
+        showtimestepdays(specfiles[0])
     else:
         makeplot()
 
@@ -67,19 +56,29 @@ def makeplot():
     import matplotlib.ticker as ticker
     fig, ax = plt.subplots(1, 1, sharey=True, figsize=(8,5), tight_layout={"pad":0.2,"w_pad":0.0,"h_pad":0.0})
 
-    dir = os.path.dirname(os.path.abspath(__file__))
-    allobsspectra = {
-                     'dop_dered_SN2013aa_20140208_fc_final.txt':('SN2013aa +360d (Maguire et al. in prep)','0.3'),
-                     '2010lp_20110928_fors2.txt': ('SN2010lp +264d (Taubenberger et al. 2013)','0.1')
-                    }
-    obsspectra = [(fn,)+allobsspectra[fn] for fn in args.obsspecfiles]
-    for (filename, serieslabel, linecolor) in obsspectra:
-      obsfile = os.path.join(dir, 'spectra',filename)
-      obsdata = np.loadtxt(obsfile)
-      obsdata = obsdata[(obsdata[:,0] > xminvalue) & (obsdata[:,0] < xmaxvalue)]
-      obsyvalues = obsdata[:,1] * (1.0 / max(obsdata[:,1]))
-      obsyvalues = scipy.signal.savgol_filter(obsyvalues, 31, 3)
-      ax.plot(obsdata[:,0], obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
+    if args.obsspecfiles != None:
+        dir = os.path.dirname(os.path.abspath(__file__))
+        obsspectralabels = \
+            {
+                '2010lp_20110928_fors2.txt': 'SN2010lp +264d (Taubenberger et al. 2013)',
+                'dop_dered_SN2013aa_20140208_fc_final.txt': 'SN2013aa +360d (Maguire et al. in prep)',
+                '2003du_20031213_3219_8822_00.txt': 'SN2003du +221.3d (Stanishev et al. 2007)'
+            }
+        colorlist = ['black','0.4']
+        obsspectra = [(fn,obsspectralabels[fn],c) for fn,c in zip(args.obsspecfiles,colorlist)]
+        for (filename, serieslabel, linecolor) in obsspectra:
+          obsfile = os.path.join(dir, 'spectra',filename)
+          obsdata = np.loadtxt(obsfile)
+          if len(obsdata[:,1]) > 5000:
+              #obsdata = scipy.signal.resample(obsdata, 10000)
+              obsdata = obsdata[::3]
+          obsdata = obsdata[(obsdata[:,0] > xminvalue) & (obsdata[:,0] < xmaxvalue)]
+          print("'{}' has {} points".format(serieslabel,len(obsdata)))
+          obsxvalues = obsdata[:,0]
+          obsyvalues = obsdata[:,1] * (1.0 / max(obsdata[:,1]))
+
+          #obsyvalues = scipy.signal.savgol_filter(obsyvalues, 5, 3)
+          ax.plot(obsxvalues, obsyvalues/max(obsyvalues), lw=1.5, label=serieslabel, zorder=-1, color=linecolor)
 
     #in the spec.out file, the column index is one more than the timestep (because column 0 is wavelength row headers, not flux at a timestep)
     timeindexlow = args.timestepmin+1
@@ -116,20 +115,20 @@ def makeplot():
         maxyvaluethisseries = max([arrayFlambda[i] if (xminvalue < 1e10 * arraylambda[i] < xmaxvalue) else -99.0 for i in range(len(arrayFlambda))])
 
         linestyle = ['-','--'][int(s / 7)]
-        ax.plot(1e10 * arraylambda, arrayFlambda/maxyvaluethisseries, linestyle=linestyle, lw=1.5-(0.1*s), label=linelabel)
+        ax.plot(1e10 * arraylambda, arrayFlambda/maxyvaluethisseries, linestyle=linestyle, lw=2.5-(0.1*s), label=linelabel)
 
     ax.set_xlim(xmin=xminvalue,xmax=xmaxvalue)
     #        ax.set_xlim(xmin=12000,xmax=19000)
     #ax.set_ylim(ymin=-0.1*maxyvalueglbal,ymax=maxyvalueglobal*1.1)
-    ax.set_ylim(ymin=-0.1,ymax=1.4)
+    ax.set_ylim(ymin=-0.1,ymax=1.1)
 
-    ax.legend(loc='best',handlelength=2,frameon=False,numpoints=1,prop={'size': 8})
+    ax.legend(loc='best',handlelength=2,frameon=False,numpoints=1,prop={'size': 11})
     ax.set_xlabel(r'Wavelength ($\AA$)')
     #ax.xaxis.set_minor_locator(ticker.MultipleLocator(base=5))
     ax.set_ylabel(r'F$_\lambda$')
 
     #filenameout = 'plotartisspec_{:}_to_{:}.pdf'.format(*timesteparray)
-    filenameout = 'plotartisspec.pdf'
+    filenameout = args.outputfile
     fig.savefig(filenameout,format='pdf')
     print('Saving {:}'.format(filenameout))
     plt.close()
