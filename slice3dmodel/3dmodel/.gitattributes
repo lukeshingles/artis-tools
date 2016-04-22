@@ -1,2 +1,0 @@
-abundances.txt filter=lfs diff=lfs merge=lfs -text
-model.txt filter=lfs diff=lfs merge=lfs -text
