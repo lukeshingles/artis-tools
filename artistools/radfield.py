@@ -378,7 +378,7 @@ def addargs(parser):
     parser.add_argument('-timestep', '-ts', action='append',
                         help='Timestep number to plot')
 
-    parser.add_argument('-modelgridindex', '-cell', type=int, default=0,
+    parser.add_argument('-modelgridindex', '-cell', action='append', default=['0'],
                         help='Modelgridindex to plot')
 
     parser.add_argument('--nospec', action='store_true',
@@ -387,7 +387,7 @@ def addargs(parser):
     parser.add_argument('--showbinedges', action='store_true',
                         help='Plot vertical lines at the bin edges')
 
-    parser.add_argument('-xmin', type=int, default=1000,
+    parser.add_argument('-xmin', type=int, default=400,
                         help='Plot range: minimum wavelength in Angstroms')
 
     parser.add_argument('-xmax', type=int, default=20000,
@@ -444,39 +444,44 @@ def main(args=None, argsraw=None, **kwargs):
             print("No radfield files found")
             return 1
 
-        radfielddata = read_files(sorted(radfield_files), args.modelgridindex)
+        if args.modelgridindex:
+            modelgridindexlist = at.parse_range_list(args.modelgridindex)
 
-        if not specfilename.is_file():
-            print(f'Could not find {specfilename}')
-            args.nospec = True
+        for modelgridindex in modelgridindexlist:
+            radfielddata = read_files(sorted(radfield_files), modelgridindex)
 
-        timesteplast = max(radfielddata['timestep'])
-        if args.timedays:
-            timesteplist = [at.get_closest_timestep(args.modelpath, args.timedays)]
-        elif args.timestep:
-            timesteplist = at.parse_range_list(args.timestep, dictvars={'last': timesteplast})
-        else:
-            print("Using last timestep.")
-            timesteplist = [timesteplast]
+            if not specfilename.is_file():
+                print(f'Could not find {specfilename}')
+                args.nospec = True
 
-        if args.xaxis == 'lambda':
-            for timestep in timesteplist:
-                radfielddata_currenttimestep = radfielddata.query('timestep==@timestep')
+            timesteplast = max(radfielddata['timestep'])
+            if args.timedays:
+                timesteplist = [at.get_closest_timestep(args.modelpath, args.timedays)]
+            elif args.timestep:
+                timesteplist = at.parse_range_list(args.timestep, dictvars={'last': timesteplast})
+            else:
+                print("Using last timestep.")
+                timesteplist = [timesteplast]
 
-                if not radfielddata_currenttimestep.empty:
-                    outputfile = str(args.outputfile).format(modelgridindex=args.modelgridindex, timestep=timestep)
-                    plot_celltimestep(
-                        radfielddata_currenttimestep, args.modelpath, specfilename, timestep, outputfile,
-                        xmin=args.xmin, xmax=args.xmax, ymin=float(args.ymin), ymax=float(args.ymax), modelgridindex=args.modelgridindex,
-                        args=args, normalised=args.normalised)
-                else:
-                    print(f'No data for timestep {timestep:d}')
-        elif args.xaxis == 'timestep':
-            outputfile = args.outputfile.format(modelgridindex=args.modelgridindex)
-            plot_timeevolution(radfielddata, args.modelpath, outputfile, args.modelgridindex, args)
-        else:
-            print('Unknown plot type {args.plot}')
-            return 1
+
+            if args.xaxis == 'lambda':
+                for timestep in timesteplist:
+                    radfielddata_currenttimestep = radfielddata.query('timestep==@timestep')
+
+                    if not radfielddata_currenttimestep.empty:
+                        outputfile = str(args.outputfile).format(modelgridindex=modelgridindex, timestep=timestep)
+                        plot_celltimestep(
+                            radfielddata_currenttimestep, args.modelpath, specfilename, timestep, outputfile,
+                            xmin=args.xmin, xmax=args.xmax, ymin=float(args.ymin), ymax=float(args.ymax), modelgridindex=modelgridindex,
+                            args=args, normalised=args.normalised)
+                    else:
+                        print(f'No data for timestep {timestep:d}')
+            elif args.xaxis == 'timestep':
+                outputfile = args.outputfile.format(modelgridindex=modelgridindex)
+                plot_timeevolution(radfielddata, args.modelpath, outputfile, modelgridindex, args)
+            else:
+                print('Unknown plot type {args.plot}')
+                return 1
 
     return 0
 
