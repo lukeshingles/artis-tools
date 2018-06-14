@@ -194,7 +194,7 @@ def plot_specout(axis, specfilename, timestep, peak_value=None, scale_factor=Non
 
 def plot_celltimestep(
         radfielddata, modelpath, specfilename, timestep, outputfile,
-        xmin, xmax, modelgridindex, args, normalised=False):
+        xmin, xmax, ymin, ymax, modelgridindex, args, normalised=False):
     """Plot a cell at a timestep things like the bin edges, fitted field, and emergent spectrum (from all cells)."""
     time_days = at.get_timestep_time(modelpath, timestep)
 
@@ -212,7 +212,8 @@ def plot_celltimestep(
     ymax3 = plot_line_estimators(
         axis, radfielddata, xmin, xmax, modelgridindex=modelgridindex, timestep=timestep, zorder=-2, color='red')
 
-    ymax = max(ymax1, ymax2, ymax3)
+    if not ymax:
+        ymax = max(ymax1, ymax2, ymax3)
 
     if not args.nospec:
         plotkwargs = {}
@@ -248,7 +249,7 @@ def plot_celltimestep(
     axis.set_ylabel(r'J$_\lambda$ [erg/s/cm$^2$/$\AA$]')
     axis.xaxis.set_minor_locator(ticker.MultipleLocator(base=100))
     axis.set_xlim(xmin=xmin, xmax=xmax)
-    axis.set_ylim(ymin=0.0, ymax=ymax)
+    axis.set_ylim(ymin=ymin, ymax=ymax)  # set yscale for radfield plot
 
     axis.legend(loc='best', handlelength=2, frameon=False, numpoints=1, prop={'size': 13})
 
@@ -392,6 +393,12 @@ def addargs(parser):
     parser.add_argument('-xmax', type=int, default=20000,
                         help='Plot range: maximum wavelength in Angstroms')
 
+    parser.add_argument('-ymin', default=False,
+                        help='Plot range: minimum y value')
+
+    parser.add_argument('-ymax', default=False,
+                        help='Plot range: maximum y value')
+
     parser.add_argument('--normalised', action='store_true',
                         help='Normalise the spectra to their peak values')
 
@@ -460,7 +467,7 @@ def main(args=None, argsraw=None, **kwargs):
                     outputfile = str(args.outputfile).format(modelgridindex=args.modelgridindex, timestep=timestep)
                     plot_celltimestep(
                         radfielddata_currenttimestep, args.modelpath, specfilename, timestep, outputfile,
-                        xmin=args.xmin, xmax=args.xmax, modelgridindex=args.modelgridindex,
+                        xmin=args.xmin, xmax=args.xmax, ymin=float(args.ymin), ymax=float(args.ymax), modelgridindex=args.modelgridindex,
                         args=args, normalised=args.normalised)
                 else:
                     print(f'No data for timestep {timestep:d}')
