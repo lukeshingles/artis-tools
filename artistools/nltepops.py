@@ -316,6 +316,10 @@ def main(args=None, argsraw=None, **kwargs):
     estimators = at.estimators.read_estimators(args.modelpath, modeldata)
     if args.modelgridindex:
         modelgridindexlist = at.parse_range_list(args.modelgridindex)
+
+    pdf_list = []
+    modelpath_list = []
+
     for timestep in range(timestepmin, timestepmax + 1):
         if args.timedays:
             time_days = float(at.get_timestep_time(args.modelpath, timestep))
@@ -359,7 +363,14 @@ def main(args=None, argsraw=None, **kwargs):
                 if dfpop.empty:
                     print(f'No NLTE population data for modelgrid cell {modelgridindex} timestep {timestep}')
                 else:
-                    make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, T_e, T_R, timestep, modelgridindex, args)
+                    outputfile = make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted,
+                                           T_e, T_R, timestep, modelgridindex, args)
+
+                    pdf_list.append(outputfile)
+                    modelpath_list.append(args.modelpath)
+
+    if len(pdf_list) > 1:
+        at.join_pdf_files(pdf_list, modelpath_list)
 
 
 def make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, T_e, T_R, timestep, modelgridindex, args):
@@ -452,6 +463,8 @@ def make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, 
     print(f"Saving {outputfilename}")
     fig.savefig(str(outputfilename), format='pdf')
     plt.close()
+
+    return outputfilename
 
 
 if __name__ == "__main__":

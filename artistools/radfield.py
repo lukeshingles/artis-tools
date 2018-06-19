@@ -18,6 +18,8 @@ from pathlib import Path
 import artistools as at
 import artistools.spectra
 
+# from PyPDF2 import PdfFileMerger
+
 
 def read_files(radfield_files, modelgridindex=-1):
     """Read radiation field data from a list of file paths into a pandas DataFrame."""
@@ -428,6 +430,9 @@ def main(args=None, argsraw=None, **kwargs):
 
     specfilename = at.firstexisting(['spec.out', 'spec.out.gz'], path=args.modelpath)
 
+    pdf_list = []
+    modelpath_list = []
+
     if args.listtimesteps:
         at.showtimesteptimes(modelpath=args.modelpath)
     else:
@@ -472,8 +477,12 @@ def main(args=None, argsraw=None, **kwargs):
                         outputfile = str(args.outputfile).format(modelgridindex=modelgridindex, timestep=timestep)
                         plot_celltimestep(
                             radfielddata_currenttimestep, args.modelpath, specfilename, timestep, outputfile,
-                            xmin=args.xmin, xmax=args.xmax, ymin=float(args.ymin), ymax=float(args.ymax), modelgridindex=modelgridindex,
+                            xmin=args.xmin, xmax=args.xmax, ymin=float(args.ymin),
+                            ymax=float(args.ymax), modelgridindex=modelgridindex,
                             args=args, normalised=args.normalised)
+                        pdf_list.append(outputfile)
+                        modelpath_list.append(args.modelpath)
+
                     else:
                         print(f'No data for timestep {timestep:d}')
             elif args.xaxis == 'timestep':
@@ -482,6 +491,9 @@ def main(args=None, argsraw=None, **kwargs):
             else:
                 print('Unknown plot type {args.plot}')
                 return 1
+
+    if len(pdf_list) > 1:
+        at.join_pdf_files(pdf_list, modelpath_list)
 
     return 0
 

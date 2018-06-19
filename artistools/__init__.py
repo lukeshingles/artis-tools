@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 # from astropy import constants as const
 
+from PyPDF2 import PdfFileMerger
+
 PYDIR = os.path.dirname(os.path.abspath(__file__))
 
 elsymbols = ['n'] + list(pd.read_csv(os.path.join(PYDIR, 'data', 'elements.csv'))['symbol'].values)
@@ -448,6 +450,21 @@ def firstexisting(filelist, path=Path('.')):
             return fullpath
 
     raise FileNotFoundError(f'None of these files exist: {", ".join([str(x) for x in fullpaths])}')
+
+
+def join_pdf_files(pdf_list, modelpath_list):
+
+    merger = PdfFileMerger()
+
+    for pdf, modelpath in zip(pdf_list, modelpath_list):
+        fullpath = firstexisting([pdf], path=modelpath)
+        merger.append(open(fullpath, 'rb'))
+
+    resultfilename = f'{pdf_list[0].split(".")[0]}-{pdf_list[-1].split(".")[0]}'
+    with open(f'{resultfilename}.pdf', 'wb') as resultfile:
+        merger.write(resultfile)
+
+    print(f'Saved to {resultfilename}.pdf')
 
 
 def addargs(parser):
