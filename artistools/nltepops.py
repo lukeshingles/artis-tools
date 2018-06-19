@@ -267,10 +267,10 @@ def addargs(parser):
     parser.add_argument('-timedays', '-time', '-t',
                         help='Time in days to plot')
 
-    parser.add_argument('-timestep', '-ts', type=int,
+    parser.add_argument('-timestep', '-ts',
                         help='Timestep number to plot')
 
-    parser.add_argument('-modelgridindex', '-cell', type=int, default=0,
+    parser.add_argument('-modelgridindex', '-cell',  action='append', default=['0'],
                         help='Plotted modelgrid cell')
 
     parser.add_argument('-exc_temperature', type=float, default=6000.,
@@ -296,11 +296,15 @@ def main(args=None, argsraw=None, **kwargs):
         args = parser.parse_args(argsraw)
 
     if args.timedays:
-        timestep = at.get_closest_timestep(args.modelpath, args.timedays)
+        timestepmin = at.get_closest_timestep(args.modelpath, args.timedays)
+        timestepmax = timestepmin
     else:
-        timestep = int(args.timestep)
-
-    time_days = float(at.get_timestep_time(args.modelpath, timestep))
+        # timestep = int(args.timestep)
+        if '-' in args.timestep:
+            timestepmin, timestepmax = [int(nts) for nts in args.timestep.split('-')]
+        else:
+            timestepmin = int(args.timestep)
+            timestepmax = timestepmin
 
     if os.path.isdir(args.outputfile):
         args.outputfile = os.path.join(args.outputfile, defaultoutputfile)
@@ -310,46 +314,55 @@ def main(args=None, argsraw=None, **kwargs):
 
     modeldata, _ = at.get_modeldata(os.path.join(args.modelpath, 'model.txt'))
     estimators = at.estimators.read_estimators(args.modelpath, modeldata)
-    if estimators:
-        if not estimators[(timestep, args.modelgridindex)]['emptycell']:
-            T_e = estimators[(timestep, args.modelgridindex)]['Te']
-            T_R = estimators[(timestep, args.modelgridindex)]['TR']
+    if args.modelgridindex:
+        modelgridindexlist = at.parse_range_list(args.modelgridindex)
+    for timestep in range(timestepmin, timestepmax + 1):
+        if args.timedays:
+            time_days = float(at.get_timestep_time(args.modelpath, timestep))
         else:
-            print(f'ERROR: cell {args.modelgridindex} is empty. Setting T_e = T_R =  6000 K')
-            T_e = 6000
-            T_R = 6000
-    else:
-        print('Setting T_e = T_R =  6000 K')
-        T_e = 6000
-        T_R = 6000
+            time_days = -1
 
-    for el_in in args.elements:
-        try:
-            atomic_number = int(el_in)
-            elsymbol = at.elsymbols[atomic_number]
-        except ValueError:
-            try:
-                elsymbol = el_in
-                atomic_number = next(
-                    Z for Z, elsymb in enumerate(at.elsymbols) if elsymb.lower() == elsymbol.lower())
-            except StopIteration:
-                print(f"Could not find element '{elsymbol}'")
-                continue
+        for modelgridindex in modelgridindexlist:
+            if estimators:
+                if not estimators[(timestep, modelgridindex)]['emptycell']:
+                    T_e = estimators[(timestep, modelgridindex)]['Te']
+                    T_R = estimators[(timestep, modelgridindex)]['TR']
+                else:
+                    print(f'ERROR: cell {modelgridindex} is empty. Setting T_e = T_R =  6000 K')
+                    T_e = 6000
+                    T_R = 6000
+            else:
+                print('Setting T_e = T_R =  6000 K')
+                T_e = 6000
+                T_R = 6000
 
-        print(elsymbol, atomic_number)
+            for el_in in args.elements:
+                try:
+                    atomic_number = int(el_in)
+                    elsymbol = at.elsymbols[atomic_number]
+                except ValueError:
+                    try:
+                        elsymbol = el_in
+                        atomic_number = next(
+                            Z for Z, elsymb in enumerate(at.elsymbols) if elsymb.lower() == elsymbol.lower())
+                    except StopIteration:
+                        print(f"Could not find element '{elsymbol}'")
+                        continue
 
-        print(f'Getting level populations for modelgrid cell {args.modelgridindex} '
-              f'timestep {timestep} t={time_days}d element {elsymbol}')
-        dfpop = read_files(args.modelpath, adata, atomic_number, T_e, T_R,
-                           timestep, args.modelgridindex, args.oldformat)
+                print(elsymbol, atomic_number)
 
-        if dfpop.empty:
-            print(f'No NLTE population data for modelgrid cell {args.modelgridindex} timestep {timestep}')
-        else:
-            make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, T_e, T_R, timestep, args)
+                print(f'Getting level populations for modelgrid cell {modelgridindex} '
+                      f'timestep {timestep} t={time_days}d element {elsymbol}')
+                dfpop = read_files(args.modelpath, adata, atomic_number, T_e, T_R,
+                                   timestep, modelgridindex, args.oldformat)
+
+                if dfpop.empty:
+                    print(f'No NLTE population data for modelgrid cell {modelgridindex} timestep {timestep}')
+                else:
+                    make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, T_e, T_R, timestep, modelgridindex, args)
 
 
-def make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, T_e, T_R, timestep, args):
+def make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, T_e, T_R, timestep, modelgridindex, args):
     # top_ion = 9999
     max_ion_stage = dfpop.ion_stage.max()
 
@@ -417,12 +430,12 @@ def make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, 
         axis.set_yscale('log')
     axes[-1].set_xlabel(r'Level index')
 
-    Te = estimators[(timestep, args.modelgridindex)]['Te']
+    Te = estimators[(timestep, modelgridindex)]['Te']
     modelname = at.get_model_name(args.modelpath)
-    velocity = modeldata['velocity'][args.modelgridindex]
+    velocity = modeldata['velocity'][modelgridindex]
     figure_title = (
         f'{modelname}\n'
-        f'Cell {args.modelgridindex} (v={velocity} km/s) with Te = {Te:.1f} K at timestep {timestep:d}')
+        f'Cell {modelgridindex} (v={velocity} km/s) with Te = {Te:.1f} K at timestep {timestep:d}')
 
     try:
         time_days = float(at.get_timestep_time(args.modelpath, timestep))
@@ -434,7 +447,7 @@ def make_plot(modeldata, estimators, dfpop, atomic_number, ionstages_permitted, 
     axes[0].set_title(figure_title, fontsize=11)
 
     outputfilename = str(args.outputfile).format(
-        elsymbol=at.elsymbols[atomic_number], cell=args.modelgridindex,
+        elsymbol=at.elsymbols[atomic_number], cell=modelgridindex,
         timestep=timestep, time_days=time_days)
     print(f"Saving {outputfilename}")
     fig.savefig(str(outputfilename), format='pdf')
