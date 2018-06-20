@@ -459,12 +459,13 @@ def join_pdf_files(pdf_list, modelpath_list):
     for pdf, modelpath in zip(pdf_list, modelpath_list):
         fullpath = firstexisting([pdf], path=modelpath)
         merger.append(open(fullpath, 'rb'))
+        os.remove(fullpath)
 
     resultfilename = f'{pdf_list[0].split(".")[0]}-{pdf_list[-1].split(".")[0]}'
     with open(f'{resultfilename}.pdf', 'wb') as resultfile:
         merger.write(resultfile)
 
-    print(f'Saved to {resultfilename}.pdf')
+    print(f'Files merged and saved to {resultfilename}.pdf')
 
 
 def addargs(parser):
