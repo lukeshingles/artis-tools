@@ -185,6 +185,10 @@ def read_estimators(modelpath, modeldata, keymatch=None):
                 elif row[1].startswith('Z=') and not skip_block:
                     parse_ion_row(row, estimators[(timestep, modelgridindex)])
 
+                elif row[0] == 'corrphotoionrenorm:' and not skip_block:
+                    estimators[(timestep, modelgridindex)]['corrphotoionrenorm'] = row[1:]
+
+
                 elif row[0] == 'heating:' and not skip_block:
                     for index, token in list(enumerate(row))[1::2]:
                         estimators[(timestep, modelgridindex)][f'heating_{token}'] = float(row[index + 1])
@@ -321,6 +325,9 @@ def plot_multi_ion_series(
         color = f'C{ion_stage - 1}'
         # or axis.step(where='pre', )
         axis.plot(xlist, ylist, linewidth=1.5, label=plotlabel, color=color, linestyle=linestyle, **plotkwargs)
+        if args.yscale == 'log':
+            axis.set_yscale('log')
+
         prev_atomic_number = atomic_number
 
 
@@ -453,9 +460,11 @@ def plot_timestep(modelname, timestep, allnonemptymgilist, estimators, xvariable
     else:
         plt.close()
 
+    return outfilename
+
 
 def plot_recombrates(estimators, outfilename, **plotkwargs):
-    atomic_number = 28
+    atomic_number = 26
     ion_stage_list = [2, 3, 4, 5]
     fig, axes = plt.subplots(
         nrows=len(ion_stage_list), ncols=1, sharex=True, figsize=(5, 8),
@@ -468,31 +477,43 @@ def plot_recombrates(estimators, outfilename, **plotkwargs):
 
         listT_e = []
         list_rrc = []
+        list_alphaR = []
+
         for _, dicttimestepmodelgrid in estimators.items():
-            if (atomic_number, ion_stage) in dicttimestepmodelgrid['RRC_LTE_Nahar']:
-                listT_e.append(dicttimestepmodelgrid['Te'])
-                list_rrc.append(dicttimestepmodelgrid['RRC_LTE_Nahar'][(atomic_number, ion_stage)])
+            try:
+                if (atomic_number, ion_stage) in dicttimestepmodelgrid['Alpha_R']:
+                    listT_e.append(dicttimestepmodelgrid['Te'])
+                    list_rrc.append(dicttimestepmodelgrid['RRC_LTE_Nahar'][(atomic_number, ion_stage)])
+                    list_alphaR.append(dicttimestepmodelgrid['Alpha_R'][(atomic_number, ion_stage)])
+            except KeyError:
+                continue
 
-        if not list_rrc:
-            continue
+        # print(sorted(listT_e))
+        # print(list_alphaR)
+        # print(list_rrc)
+        # if not list_rrc:
+        #     continue
 
-        listT_e, list_rrc = zip(*sorted(zip(listT_e, list_rrc), key=lambda x: x[0]))
+        # listT_e, list_rrc = zip(*sorted(zip(listT_e, list_rrc), key=lambda x: x[0]))
 
         rrcfiles = glob.glob(
-            f'/Users/lshingles/Library/Mobile Documents/com~apple~CloudDocs/GitHub/artis-atomic/atomic-data-nahar/{at.elsymbols[atomic_number].lower()}{ion_stage - 1}.rrc*.txt')
+            f'/Users/ccollins/artis_nebular/artis-atomic/atomic-data-nahar/{at.elsymbols[atomic_number].lower()}{ion_stage - 1}.rrc*.txt')
         if rrcfiles:
             dfrecombrates = get_ionrecombrates_fromfile(rrcfiles[0])
             logT_e_min = math.log10(min(listT_e))
             logT_e_max = math.log10(max(listT_e))
             dfrecombrates.query("logT > @logT_e_min & logT < @logT_e_max", inplace=True)
+            print(dfrecombrates)
 
             listT_e_Nahar = [10 ** x for x in dfrecombrates['logT'].values]
             axis.plot(listT_e_Nahar, dfrecombrates['RRC_total'], linewidth=2,
                       label=ionstr + " (Nahar)", markersize=6, marker='s', **plotkwargs)
 
-        axis.plot(listT_e, list_rrc, linewidth=2, label=ionstr, markersize=6, marker='s', **plotkwargs)
-
+        axis.plot(listT_e, list_rrc, linewidth=2, label=ionstr+' nahar', markersize=6, marker='s', linestyle='none', **plotkwargs)
+        axis.plot(listT_e, list_alphaR, linewidth=2, label=ionstr+' alphaR', markersize=6, marker='s', linestyle='none', **plotkwargs)
         axis.legend(loc='best', handlelength=2, frameon=False, numpoints=1, prop={'size': 10})
+        axis.tick_params(top=True, right=True, direction='inout')
+
 
     # modelname = at.get_model_name(".")
     # plotlabel = f'Timestep {timestep}'
@@ -504,6 +525,22 @@ def plot_recombrates(estimators, outfilename, **plotkwargs):
     fig.savefig(outfilename, format='pdf')
     print(f'Saved {outfilename}')
     plt.close()
+
+
+def plot_corrphotoionrenorm(estimators, compositiondata, timestep, modelgridindex):
+    corrphotoionrenorm_dict = {}
+    estim = estimators[(timestep, modelgridindex)]
+
+    for corrphotoionrenorm in estim['corrphotoionrenorm']:
+        print(corrphotoionrenorm)
+        for element, lower_ion, upper_ion in zip(compositiondata['Z'], compositiondata['lowermost_ionstage'], compositiondata['uppermost_ionstage']):
+            for ion in range(lower_ion, upper_ion + 1):
+            #     estim = estimators[(timestep, modelgridindex)]
+            # # for value in estim['corrphotoionrenorm']:
+                corrphotoionrenorm_dict[element, ion] = corrphotoionrenorm
+    #
+    print('ts', timestep, corrphotoionrenorm_dict)
+
 
 
 def addargs(parser):
@@ -540,6 +577,8 @@ def addargs(parser):
     parser.add_argument('-show', action='store_true',
                         help='Show plot before quitting')
 
+    parser.add_argument('-yscale', choices=['linear', 'log'], default='linear',
+                        help='Choose to plot either a log scale or linear scale on y-axis. Linear is default.')
 
 def main(args=None, argsraw=None, **kwargs):
     if args is None:
@@ -566,8 +605,8 @@ def main(args=None, argsraw=None, **kwargs):
         return -1
 
     serieslist = [
-        ['heating_gamma', 'heating_coll', 'heating_bf', 'heating_ff'],
-        ['cooling_adiabatic', 'cooling_coll', 'cooling_fb', 'cooling_ff'],
+        # ['heating_gamma', 'heating_coll', 'heating_bf', 'heating_ff'],
+        # ['cooling_adiabatic', 'cooling_coll', 'cooling_fb', 'cooling_ff'],
         # ['heating_gamma/gamma_dep'],
         ['Te', 'TR'],
         ['nne'],
@@ -586,6 +625,9 @@ def main(args=None, argsraw=None, **kwargs):
         # [['Alpha_R / RRC_LTE_Nahar', ['Fe II', 'Fe III', 'Fe IV', 'Fe V', 'Ni III']]],
         # [['gamma_NT', ['Fe I', 'Fe II', 'Fe III', 'Fe IV', 'Fe V', 'Ni II']]],
     ]
+
+    pdf_list = []
+    modelpath_list = []
 
     if args.recombrates:
         plot_recombrates(estimators, "plotestimators_recombrates.pdf")
@@ -614,9 +656,16 @@ def main(args=None, argsraw=None, **kwargs):
             allnonemptymgilist = [modelgridindex for modelgridindex in modeldata.index
                                   if not estimators[(timestep, modelgridindex)]['emptycell']]
 
-            plot_timestep(modelname, timestep, allnonemptymgilist, estimators, args.x, serieslist,
+            # plot_corrphotoionrenorm(estimators, compositiondata, timestep, 50)
+
+            outfilename = plot_timestep(modelname, timestep, allnonemptymgilist, estimators, args.x, serieslist,
                           modeldata, abundancedata, compositiondata, args)
 
+            pdf_list.append(outfilename)
+            modelpath_list.append(modelpath)
+
+    if len(pdf_list) > 1:
+        at.join_pdf_files(pdf_list, modelpath_list)
 
 if __name__ == "__main__":
     main()
