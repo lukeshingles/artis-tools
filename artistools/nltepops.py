@@ -270,7 +270,7 @@ def addargs(parser):
     parser.add_argument('-timestep', '-ts',
                         help='Timestep number to plot')
 
-    parser.add_argument('-modelgridindex', '-cell',  action='append', default=['0'],
+    parser.add_argument('-modelgridindex', '-cell',  action='append',  # default=['0'],
                         help='Plotted modelgrid cell')
 
     parser.add_argument('-exc_temperature', type=float, default=6000.,
