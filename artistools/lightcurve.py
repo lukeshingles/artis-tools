@@ -232,9 +232,11 @@ def make_magnitudes_plot(modelpaths, args):
     f, axarr = plt.subplots(nrows=rows, ncols=cols, sharex='all', sharey='all', squeeze=True)
     axarr = axarr.flatten()
 
+    linenames = []
     for modelnumber, modelpath in enumerate(modelpaths):
 
         modelname = at.get_model_name(modelpath)
+        linenames.append(modelname)
         print(f'Reading spectra: {modelname}')
         filters_dict = get_magnitudes(modelpath)
 
@@ -242,6 +244,8 @@ def make_magnitudes_plot(modelpaths, args):
             hesma_model = read_hesma_lightcurve(args)
             linename = str(args.plot_hesma_model).split('_')[:3]
             linename = "_".join(linename)
+            if linename not in linenames:
+                linenames.append(linename)
 
         axarr[0].invert_yaxis()
         for plotnumber, key in enumerate(filters_dict):
@@ -251,10 +255,10 @@ def make_magnitudes_plot(modelpaths, args):
             for t, mag in filters_dict[key]:
                 time.append(float(t))
                 magnitude.append(mag)
+            axarr[plotnumber].plot(time, magnitude)
 
-            axarr[plotnumber].plot(time, magnitude, label=modelname)
             if args.plot_hesma_model and key in hesma_model.keys():
-                axarr[plotnumber].plot(hesma_model.t, hesma_model[key], color='black', label='Sim(2010) 1.06 M$_\odot$ pure C+O WD')  ##linename
+                axarr[plotnumber].plot(hesma_model.t, hesma_model[key], color='black')
 
             axarr[plotnumber].axis([0, 100, -14, -20.5])
             axarr[plotnumber].text(75, -19, key)
@@ -270,7 +274,7 @@ def make_magnitudes_plot(modelpaths, args):
     plt.minorticks_on()
     # f.suptitle(f'{modelname}')
     plt.subplots_adjust(hspace=.0, wspace=.0)
-    f.legend(frameon=True, fontsize='xx-small')
+    f.legend(labels=linenames, frameon=True, fontsize='xx-small')
     plt.savefig(args.outputfile, format='pdf')
 
 

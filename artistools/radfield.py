@@ -142,12 +142,28 @@ def plot_fitted_field(axis, radfielddata, xmin, xmax, modelgridindex=None, times
             else:
                 fittedxvalues += list(arr_lambda)
                 fittedyvalues += list(arr_j_lambda)
+                if any([x < 1e-10 for x in arr_j_lambda]) and row['J_nu_avg'] > 0.:
+                    dlambda = const.c.to('angstrom/s').value * ((1 / row['nu_lower']) - (1 / row['nu_upper']))
+
+                    J_lambda_avg = (
+                        row['J'] / dlambda if (
+                            (not math.isnan(row['J'] / dlambda) and row['T_R'] >= 0)) else 0.0)
+
+                    print(arr_lambda[0], arr_lambda[-1])
+                    print(f'dlambda: {dlambda}')
+                    print(f"lambda1: {const.c.to('angstrom/s').value / row['nu_lower']}")
+                    print(f"lambda2: {const.c.to('angstrom/s').value / row['nu_upper']}")
+                    print(f'J_lambda_avg: {J_lambda_avg}')
+                    print(row)
+                    print(arr_j_lambda)
+
         else:
             arr_nu_hz = (row['nu_lower'], row['nu_upper'])
             arr_j_lambda = [0., 0.]
 
             fittedxvalues += [const.c.to('angstrom/s').value / nu for nu in arr_nu_hz]
-            fittedyvalues += arr_j_lambda
+            fittedyvalues += list(arr_j_lambda)
+            print("HERE")
 
     if fittedxvalues:
         axis.plot(fittedxvalues, fittedyvalues, label='Fitted field', **plotkwargs)
@@ -210,10 +226,13 @@ def plot_celltimestep(
     ymax2 = plot_fitted_field(
         axis, radfielddata, xmin, xmax, modelgridindex=modelgridindex, timestep=timestep,
         alpha=0.8, color='green', linewidth=1.5)
-
+    c = const.c.to('angstrom/s').value
     ymax3 = plot_line_estimators(
         axis, radfielddata, xmin, xmax, modelgridindex=modelgridindex, timestep=timestep, zorder=-2, color='red')
-
+    # radfielddatalog = radfielddata.copy()
+    # radfielddatalog.eval('lambda_upper = @c / nu_lower', inplace=True)
+    # radfielddatalog.eval('lambda_lower = @c / nu_upper', inplace=True)
+    # print(radfielddatalog)
     if not ymax:
         ymax = max(ymax1, ymax2, ymax3)
 
@@ -380,7 +399,7 @@ def addargs(parser):
     parser.add_argument('-timestep', '-ts', action='append',
                         help='Timestep number to plot')
 
-    parser.add_argument('-modelgridindex', '-cell', action='append', default=['0'],
+    parser.add_argument('-modelgridindex', '-cell', action='append', #default=['0'],
                         help='Modelgridindex to plot')
 
     parser.add_argument('--nospec', action='store_true',
@@ -389,10 +408,10 @@ def addargs(parser):
     parser.add_argument('--showbinedges', action='store_true',
                         help='Plot vertical lines at the bin edges')
 
-    parser.add_argument('-xmin', type=int, default=400,
+    parser.add_argument('-xmin', type=int, default=150,
                         help='Plot range: minimum wavelength in Angstroms')
 
-    parser.add_argument('-xmax', type=int, default=20000,
+    parser.add_argument('-xmax', type=int, default=10000,
                         help='Plot range: maximum wavelength in Angstroms')
 
     parser.add_argument('-ymin', default=False,

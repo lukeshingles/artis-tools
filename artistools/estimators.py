@@ -479,14 +479,25 @@ def plot_recombrates(estimators, outfilename, **plotkwargs):
         list_rrc = []
         list_alphaR = []
 
-        for _, dicttimestepmodelgrid in estimators.items():
-            try:
-                if (atomic_number, ion_stage) in dicttimestepmodelgrid['Alpha_R']:
-                    listT_e.append(dicttimestepmodelgrid['Te'])
-                    list_rrc.append(dicttimestepmodelgrid['RRC_LTE_Nahar'][(atomic_number, ion_stage)])
-                    list_alphaR.append(dicttimestepmodelgrid['Alpha_R'][(atomic_number, ion_stage)])
-            except KeyError:
-                continue
+        for (timestep, modelgridindex), dicttimestepmodelgrid in estimators.items():
+            # print(timestep)
+            # print(modelgridindex)
+            if timestep >= 30:
+                try:
+                    if (atomic_number, ion_stage) in dicttimestepmodelgrid['Alpha_R']:
+                        listT_e.append(dicttimestepmodelgrid['Te'])
+                        list_rrc.append(dicttimestepmodelgrid['RRC_LTE_Nahar'][(atomic_number, ion_stage)])
+                        list_alphaR.append(dicttimestepmodelgrid['Alpha_R'][(atomic_number, ion_stage)])
+                        alph_r = dicttimestepmodelgrid['Alpha_R'][(atomic_number, ion_stage)]
+                        # if 40000 < dicttimestepmodelgrid['Te']:
+                        if 1000 < dicttimestepmodelgrid['Te'] < 4700 and ion_stage == 3 and 4.4e-12 < alph_r < 6.0e-12:
+                        # if 5200 < dicttimestepmodelgrid['Te'] < 5400 and ion_stage == 3 and alph_r > 4.29e-12:
+                            print('ts', timestep, 'cell', modelgridindex)
+                            print('Z', atomic_number, 'ionstage', ion_stage)
+                            print('Te', dicttimestepmodelgrid['Te'], 'alpha_r', dicttimestepmodelgrid['Alpha_R'][(atomic_number, ion_stage)])
+                            print('TR', dicttimestepmodelgrid['TR'])
+                except KeyError:
+                    continue
 
         # print(sorted(listT_e))
         # print(list_alphaR)
@@ -503,16 +514,17 @@ def plot_recombrates(estimators, outfilename, **plotkwargs):
             logT_e_min = math.log10(min(listT_e))
             logT_e_max = math.log10(max(listT_e))
             dfrecombrates.query("logT > @logT_e_min & logT < @logT_e_max", inplace=True)
-            print(dfrecombrates)
+            # print(dfrecombrates)
 
             listT_e_Nahar = [10 ** x for x in dfrecombrates['logT'].values]
             axis.plot(listT_e_Nahar, dfrecombrates['RRC_total'], linewidth=2,
                       label=ionstr + " (Nahar)", markersize=6, marker='s', **plotkwargs)
 
-        axis.plot(listT_e, list_rrc, linewidth=2, label=ionstr+' nahar', markersize=6, marker='s', linestyle='none', **plotkwargs)
+        axis.plot(listT_e, list_rrc, linewidth=2, label=ionstr+' RRC_LTE_Nahar', markersize=6, marker='s', linestyle='none', **plotkwargs)
         axis.plot(listT_e, list_alphaR, linewidth=2, label=ionstr+' alphaR', markersize=6, marker='s', linestyle='none', **plotkwargs)
         axis.legend(loc='best', handlelength=2, frameon=False, numpoints=1, prop={'size': 10})
         axis.tick_params(top=True, right=True, direction='inout')
+        axis.set_xlabel("T_e")
 
 
     # modelname = at.get_model_name(".")
@@ -521,10 +533,10 @@ def plot_recombrates(estimators, outfilename, **plotkwargs):
     # if time_days >= 0:
     #     plotlabel += f' (t={time_days:.2f}d)'
     # fig.suptitle(plotlabel, fontsize=12)
-
+    plt.show()
     fig.savefig(outfilename, format='pdf')
     print(f'Saved {outfilename}')
-    plt.close()
+    # plt.close()
 
 
 def plot_corrphotoionrenorm(estimators, compositiondata, timestep, modelgridindex):
@@ -609,14 +621,14 @@ def main(args=None, argsraw=None, **kwargs):
         # ['cooling_adiabatic', 'cooling_coll', 'cooling_fb', 'cooling_ff'],
         # ['heating_gamma/gamma_dep'],
         ['Te', 'TR'],
-        ['nne'],
+        # ['nne'],
         # # [['initabundances', ['Fe', 'Ni', 'Ni_56', 'Ni_stable', 'Ar']]],
-        [['populations', ['He I', 'He II', 'He III']]],
-        [['populations', ['C I', 'C II', 'C III', 'C IV', 'C V']]],
-        [['populations', ['O I', 'O II', 'O III', 'O IV']]],
-        [['populations', ['Ne I', 'Ne II', 'Ne III', 'Ne IV', 'Ne V']]],
-        [['populations', ['Si I', 'Si II', 'Si III', 'Si IV', 'Si V']]],
-        [['populations', ['Cr I', 'Cr II', 'Cr III', 'Cr IV', 'Cr V']]],
+        # [['populations', ['He I', 'He II', 'He III']]],
+        # [['populations', ['C I', 'C II', 'C III', 'C IV', 'C V']]],
+        # [['populations', ['O I', 'O II', 'O III', 'O IV']]],
+        # [['populations', ['Ne I', 'Ne II', 'Ne III', 'Ne IV', 'Ne V']]],
+        # [['populations', ['Si I', 'Si II', 'Si III', 'Si IV', 'Si V']]],
+        # [['populations', ['Cr I', 'Cr II', 'Cr III', 'Cr IV', 'Cr V']]],
         [['populations', ['Fe I', 'Fe II', 'Fe III', 'Fe IV', 'Fe V', 'Fe VI', 'Fe VII', 'Fe VIII']]],
         [['populations', ['Co I', 'Co II', 'Co III', 'Co IV', 'Co V', 'Co VI', 'Co VII']]],
         [['populations', ['Ni I', 'Ni II', 'Ni III', 'Ni IV', 'Ni V', 'Ni VI', 'Ni VII']]],
