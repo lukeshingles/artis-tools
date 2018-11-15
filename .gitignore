@@ -38,3 +38,5 @@ wheels/
 *.egg
 *.xml
 artistools/data/hesma/*
+artistools/data/lightcurves/*
+artistools/data/spectra/*
