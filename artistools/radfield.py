@@ -119,6 +119,16 @@ def plot_fitted_field(axis, radfielddata, xmin, xmax, modelgridindex=None, times
         (' & modelgridindex==@modelgridindex' if modelgridindex else '') +
         (' & timestep==@timestep' if timestep else ''))
 
+    # # print(radfielddata['timestep'])
+    # # print(radfielddata['J_nu_avg'])
+    # plt.plot(radfielddata['nu_lower'], radfielddata['J_nu_avg'])
+    # plt.xscale('log')
+    # plt.xlabel('frequency')
+    # plt.ylabel('J_nu_bar')
+    # # plt.show()
+    # plt.savefig(f'J_nu_bar_ts{timestep}_cell{modelgridindex}')
+    # print(f'Saved fig as J_nu_bar_ts{timestep}_cell{modelgridindex}')
+
     for _, row in radfielddata_subset.iterrows():
         if row['bin_num'] == -1 or row['W'] >= 0:
             if row['bin_num'] == -1:
@@ -508,7 +518,7 @@ def main(args=None, argsraw=None, **kwargs):
                 outputfile = args.outputfile.format(modelgridindex=modelgridindex)
                 plot_timeevolution(radfielddata, args.modelpath, outputfile, modelgridindex, args)
             else:
-                print('Unknown plot type {args.plot}')
+                print(f'Unknown plot type {args.plot}')
                 return 1
 
     if len(pdf_list) > 1:
