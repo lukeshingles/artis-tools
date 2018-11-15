@@ -464,7 +464,7 @@ def plot_timestep(modelname, timestep, allnonemptymgilist, estimators, xvariable
 
 
 def plot_recombrates(estimators, outfilename, **plotkwargs):
-    atomic_number = 26
+    atomic_number = 28
     ion_stage_list = [2, 3, 4, 5]
     fig, axes = plt.subplots(
         nrows=len(ion_stage_list), ncols=1, sharex=True, figsize=(5, 8),
@@ -620,18 +620,20 @@ def main(args=None, argsraw=None, **kwargs):
         # ['heating_gamma', 'heating_coll', 'heating_bf', 'heating_ff'],
         # ['cooling_adiabatic', 'cooling_coll', 'cooling_fb', 'cooling_ff'],
         # ['heating_gamma/gamma_dep'],
-        ['Te', 'TR'],
+        ['Te', 'TR', 'TJ'],
+        # ['W'],
         # ['nne'],
         # # [['initabundances', ['Fe', 'Ni', 'Ni_56', 'Ni_stable', 'Ar']]],
-        # [['populations', ['He I', 'He II', 'He III']]],
+        [['populations', ['He I', 'He II', 'He III']]],
         # [['populations', ['C I', 'C II', 'C III', 'C IV', 'C V']]],
         # [['populations', ['O I', 'O II', 'O III', 'O IV']]],
         # [['populations', ['Ne I', 'Ne II', 'Ne III', 'Ne IV', 'Ne V']]],
         # [['populations', ['Si I', 'Si II', 'Si III', 'Si IV', 'Si V']]],
         # [['populations', ['Cr I', 'Cr II', 'Cr III', 'Cr IV', 'Cr V']]],
-        [['populations', ['Fe I', 'Fe II', 'Fe III', 'Fe IV', 'Fe V', 'Fe VI', 'Fe VII', 'Fe VIII']]],
-        [['populations', ['Co I', 'Co II', 'Co III', 'Co IV', 'Co V', 'Co VI', 'Co VII']]],
-        [['populations', ['Ni I', 'Ni II', 'Ni III', 'Ni IV', 'Ni V', 'Ni VI', 'Ni VII']]],
+        # [['populations', ['Mn I', 'Mn II', 'Mn III', 'Mn IV', 'Mn V']]],
+        [['populations', ['Fe I', 'Fe II', 'Fe III', 'Fe IV', 'Fe V']]],
+        [['populations', ['Co I', 'Co II', 'Co III', 'Co IV', 'Co V']]],
+        [['populations', ['Ni I', 'Ni II', 'Ni III', 'Ni IV', 'Ni V']]],
         # [['populations', ['Fe I', 'Fe II', 'Fe III', 'Ni II', 'Ni III', 'Ar I']]],
         # [['populations', ['Fe I', 'Fe II', 'Fe III', 'Fe IV', 'Fe V', 'Ni II']]],
         # [['Alpha_R / RRC_LTE_Nahar', ['Fe II', 'Fe III', 'Fe IV', 'Fe V', 'Ni III']]],
