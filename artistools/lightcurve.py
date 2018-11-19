@@ -132,9 +132,11 @@ def get_magnitudes(modelpath):
 
     filters_dict['bol'] = [
         (time, bol_magnitude) for time, bol_magnitude in zip(timearray, bolometric_magnitude(modelpath, timearray))
-        if math.isfinite(bol_magnitude)]
+        if math.isfinite(bol_magnitude)] ###Add bol to filters dict
 
     filters_list = ['U', 'B', 'V', 'R', 'I', 'J', 'H', 'K']
+    # filters_list = ['B', 'V']
+
 
     for filter_name in filters_list:
         if filter_name not in filters_dict:
@@ -232,7 +234,17 @@ def make_magnitudes_plot(modelpaths, args):
     f, axarr = plt.subplots(nrows=rows, ncols=cols, sharex='all', sharey='all', squeeze=True)
     axarr = axarr.flatten()
 
+
     linenames = []
+
+    # model = read_lightcurve()
+    # model_B = (model.loc[model['band'] == 'B'])
+    # print()
+    # plt.plot(model_B['time'], model_B['magnitude'], 'r.')
+    # model_V = (model.loc[model['band'] == 'V'])
+    # axarr[1].plot(model_V['time'], model_V['magnitude'], 'r.')
+    # linenames.append('SN2012fr')
+
     for modelnumber, modelpath in enumerate(modelpaths):
 
         modelname = at.get_model_name(modelpath)
@@ -240,14 +252,15 @@ def make_magnitudes_plot(modelpaths, args):
         print(f'Reading spectra: {modelname}')
         filters_dict = get_magnitudes(modelpath)
 
-        if args.plot_hesma_model:
+        if modelnumber == 0 and args.plot_hesma_model:
             hesma_model = read_hesma_lightcurve(args)
             linename = str(args.plot_hesma_model).split('_')[:3]
             linename = "_".join(linename)
+
             if linename not in linenames:
                 linenames.append(linename)
 
-        axarr[0].invert_yaxis()
+
         for plotnumber, key in enumerate(filters_dict):
             time = []
             magnitude = []
@@ -255,30 +268,44 @@ def make_magnitudes_plot(modelpaths, args):
             for t, mag in filters_dict[key]:
                 time.append(float(t))
                 magnitude.append(mag)
+
             axarr[plotnumber].plot(time, magnitude)
 
-            if args.plot_hesma_model and key in hesma_model.keys():
-                axarr[plotnumber].plot(hesma_model.t, hesma_model[key], color='black')
+            if modelnumber == 0 and args.plot_hesma_model and key in hesma_model.keys():
+                plt.plot(hesma_model.t, hesma_model[key], color='black')
 
-            axarr[plotnumber].axis([0, 100, -14, -20.5])
+            # axarr[plotnumber].axis([10, 60, -16, -19.5])
             axarr[plotnumber].text(75, -19, key)
-            axarr[plotnumber].minorticks_on()
+            plt.minorticks_on()
+            plt.tick_params(axis='both', top=True, right=True)
 
     for plot in range(rows):
+    # plt.ylabel('Magnitude', fontsize='x-large')
         axarr[plot*cols].set_ylabel('Magnitude')
 
     plots = np.arange(0, rows*cols)
     for plot in plots[-cols:]:
         axarr[plot].set_xlabel('Time in Days')
 
+    # axarr[0].axis([10, 50, -17.5, -19.5])
+    # axarr[1].axis([10, 50, -17.5, -19.5])
+    plt.axis([0, 100, -14, -20])
+    # plt.gca().invert_yaxis()
+
+    print(linenames)
     plt.minorticks_on()
+    # axarr[0].tick_params(axis='both', top=True, right=True)
     # f.suptitle(f'{modelname}')
     plt.subplots_adjust(hspace=.0, wspace=.0)
     f.legend(labels=linenames, frameon=True, fontsize='xx-small')
+    # plt.tight_layout()
+    # f.set_figheight(8)
+    # f.set_figwidth(7)
+    # plt.show()
     plt.savefig(args.outputfile, format='pdf')
 
 
-def colour_evolution_plot(filter_name1, filter_name2, modelpath, args):
+def colour_evolution_plot(filter_name1, filter_name2, modelnumber, modelpath, args):
     modelname = at.get_model_name(modelpath)
     print(f'Reading spectra: {modelname}')
     filters_dict = get_magnitudes(modelpath)
@@ -299,13 +326,36 @@ def colour_evolution_plot(filter_name1, filter_name2, modelpath, args):
             plot_times.append(float(time))
             diff.append(time_dict_1[time] - time_dict_2[time])
 
-    plt.plot(plot_times, diff, marker='.', linestyle='None', label=modelname)
-    plt.ylabel(f'{filter_name1}-{filter_name2}')
-    plt.xlabel('Time in Days')
+    if modelnumber == 0:
+        model = read_lightcurve()
 
-    plt.legend(loc='best', frameon=True)
-    plt.title('B-V Colour Evolution')
-    # plt.ylim(-0.5, 3)
+        model_B = (model.loc[model['band'] == 'B'])
+        model_V = (model.loc[model['band'] == 'V'])
+
+        merged_model = model_B.merge(model_V, how='inner', on=['time'])
+        merged_model = merged_model.rename(index=str, columns={"magnitude_x": "B", "magnitude_y": "V"})
+        merged_model['B-V'] = merged_model['B'] - merged_model['V']
+        print(merged_model)
+        plt.plot(merged_model['time'], merged_model['B-V'], 'r.', label='SN2012fr')
+
+    if modelnumber == 0:
+        plt.plot(plot_times, diff, label=modelname)
+        modelname = 'ARTIS with NLTE solver'
+    elif modelnumber == 1:
+        plt.plot(plot_times, diff, label=modelname, color='black')
+        modelname = 'New atomic data'
+
+    plt.ylabel(f'{filter_name1}-{filter_name2}', fontsize='x-large')
+    plt.xlabel('Time in Days Since Explosion', fontsize='x-large')
+    plt.tight_layout()
+
+    # plt.legend(loc='best', frameon=True)
+    # plt.title('B-V Colour Evolution')
+    plt.ylim(-0.5, 1.5)
+    plt.xlim(10, 50)
+
+    plt.minorticks_on()
+    plt.tick_params(axis='both', top=True, right=True)
 
     plt.savefig(args.outputfile, format='pdf')
 
@@ -328,7 +378,23 @@ def read_hesma_lightcurve(args):
 
         else:
             hesma_model = pd.read_csv(hesma_modelname, delim_whitespace=True)
+        # print(hesma_model)
     return hesma_model
+
+def read_lightcurve():
+    print("here")
+    modelpath = os.path.join(at.PYDIR, 'data/lightcurves/SN2012fr.dat')
+    # filename = os.path('SN2012fr.dat')
+    # modelpath = data_directory / filename
+
+    model = pd.read_csv(modelpath)
+
+    model = model[['time', 'magnitude', 'band']]
+    model['time'] = model['time'].apply(lambda x: x - 56223)
+    model['magnitude'] = model['magnitude'].apply(lambda x: (x - 5 * np.log10(17.9e6/10))) ##24e6 is distance to 2012fr - needs changed
+    print(model)
+
+    return model
 
 
 def addargs(parser):
@@ -391,8 +457,8 @@ def main(args=None, argsraw=None, **kwargs):
         print(f'Saved figure: {args.outputfile}')
 
     elif args.colour_evolution:
-        for modelpath in modelpaths:
-            colour_evolution_plot('B', 'V', modelpath, args)
+        for modelnumber, modelpath in enumerate(modelpaths):
+            colour_evolution_plot('B', 'V', modelnumber, modelpath, args)
         print(f'Saved figure: {args.outputfile}')
 
     else:
