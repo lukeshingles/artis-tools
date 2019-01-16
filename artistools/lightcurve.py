@@ -332,11 +332,11 @@ def colour_evolution_plot(filter_name1, filter_name2, modelnumber, modelpath, ar
         model_B = (model.loc[model['band'] == 'B'])
         model_V = (model.loc[model['band'] == 'V'])
 
-        merged_model = model_B.merge(model_V, how='inner', on=['time'])
-        merged_model = merged_model.rename(index=str, columns={"magnitude_x": "B", "magnitude_y": "V"})
-        merged_model['B-V'] = merged_model['B'] - merged_model['V']
-        print(merged_model)
-        plt.plot(merged_model['time'], merged_model['B-V'], 'r.', label='SN2012fr')
+        # merged_model = model_B.merge(model_V, how='inner', on=['time'])
+        # merged_model = merged_model.rename(index=str, columns={"magnitude_x": "B", "magnitude_y": "V"})
+        # merged_model['B-V'] = merged_model['B'] - merged_model['V']
+        # print(merged_model)
+        # plt.plot(merged_model['time'], merged_model['B-V'], 'r.', label='SN2012fr')
 
     if modelnumber == 0:
         plt.plot(plot_times, diff, label=modelname)

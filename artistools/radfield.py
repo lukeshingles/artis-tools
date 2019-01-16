@@ -281,10 +281,13 @@ def plot_celltimestep(
     axis.xaxis.set_minor_locator(ticker.MultipleLocator(base=100))
     axis.set_xlim(xmin=xmin, xmax=xmax)
     axis.set_ylim(ymin=ymin, ymax=ymax)  # set yscale for radfield plot
+    # axis.set_yscale('log')
+    # axis.set_xscale('log')
 
     axis.legend(loc='best', handlelength=2, frameon=False, numpoints=1, prop={'size': 13})
 
     print(f'Saving to {outputfile}')
+    # plt.show()
     fig.savefig(str(outputfile), format='pdf')
     plt.close()
 
