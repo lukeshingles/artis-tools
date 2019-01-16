@@ -88,6 +88,8 @@ def get_units_string(variable):
 
 def parse_ion_row(row, outdict):
     variablename = row[0]
+    if 'gamma' in row:
+        return
     if row[1].endswith('='):
         atomic_number = int(row[2])
         startindex = 3
@@ -97,6 +99,17 @@ def parse_ion_row(row, outdict):
 
     if variablename not in outdict:
         outdict[variablename] = {}
+
+
+        # if 'gamma' in row[7]:
+        #     row[7] = row[7][:-6]
+        #     row = row[:8]
+        #     # print(row)
+        # # if float(row[5]) < 10:
+        # #     print(row)
+
+    if row[0] == 'gamma:':
+        return
 
     for index, token in list(enumerate(row))[startindex::2]:
         try:
@@ -181,6 +194,15 @@ def read_estimators(modelpath, modeldata, keymatch=None):
                             estimators[(timestep, modelgridindex)]['W'] = float(row[9])
                             estimators[(timestep, modelgridindex)]['TJ'] = float(row[11])
                             estimators[(timestep, modelgridindex)]['nne'] = float(row[15])
+
+                elif row[0] == 'gamma:':
+                    if 'gamma' not in estimators[(timestep, modelgridindex)]:
+                        estimators[(timestep, modelgridindex)]['gamma'] = {}
+
+                    lower = row[5]
+                    upper = row[7]
+                    gamma = row[9]
+                    estimators[(timestep, modelgridindex)]['gamma'][(lower, upper)] = gamma
 
                 elif row[1].startswith('Z=') and not skip_block:
                     parse_ion_row(row, estimators[(timestep, modelgridindex)])
@@ -464,7 +486,7 @@ def plot_timestep(modelname, timestep, allnonemptymgilist, estimators, xvariable
 
 
 def plot_recombrates(estimators, outfilename, **plotkwargs):
-    atomic_number = 28
+    atomic_number = 26
     ion_stage_list = [2, 3, 4, 5]
     fig, axes = plt.subplots(
         nrows=len(ion_stage_list), ncols=1, sharex=True, figsize=(5, 8),
@@ -553,6 +575,26 @@ def plot_corrphotoionrenorm(estimators, compositiondata, timestep, modelgridinde
     #
     print('ts', timestep, corrphotoionrenorm_dict)
 
+
+def plot_gamma(estimators, timestep):
+    gamma_values = estimators[(timestep, 13)]['gamma']
+    # print(gamma_values.values())
+
+    plot_array = np.array(list(gamma_values.values()), dtype=float)
+    # print(plot_array[:20])
+    for i, gamma in enumerate(plot_array):
+        if i == 0:
+            continue
+        plot_array[i] += plot_array[i-1]
+    print('made plot array')
+    print(type(plot_array[0]))
+    # plot_array = plot_array[:200]
+    plt.plot(np.arange(0, len(plot_array)), plot_array)
+    plt.ylabel('gamma')
+    print('made plot')
+    plt.show()
+    print('plot closed')
+    # print(sum(plot_array) + 1.8e-3)
 
 
 def addargs(parser):
@@ -671,6 +713,8 @@ def main(args=None, argsraw=None, **kwargs):
                                   if not estimators[(timestep, modelgridindex)]['emptycell']]
 
             # plot_corrphotoionrenorm(estimators, compositiondata, timestep, 50)
+
+            # plot_gamma(estimators, timestep)
 
             outfilename = plot_timestep(modelname, timestep, allnonemptymgilist, estimators, args.x, serieslist,
                           modeldata, abundancedata, compositiondata, args)
