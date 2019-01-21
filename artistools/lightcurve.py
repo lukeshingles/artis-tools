@@ -351,8 +351,8 @@ def colour_evolution_plot(filter_name1, filter_name2, modelnumber, modelpath, ar
 
     # plt.legend(loc='best', frameon=True)
     # plt.title('B-V Colour Evolution')
-    plt.ylim(-0.5, 1.5)
-    plt.xlim(10, 50)
+    # plt.ylim(-0.5, 1.5)
+    # plt.xlim(10, 50)
 
     plt.minorticks_on()
     plt.tick_params(axis='both', top=True, right=True)
