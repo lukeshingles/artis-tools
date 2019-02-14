@@ -135,16 +135,21 @@ def parse_ion_row(row, outdict):
             outdict['Alpha_R'][(atomic_number, ion_stage)] = value_thision / outdict['nne']
 
 
-def read_estimators(modelpath, modeldata, keymatch=None):
-    """Read estimator files into a nested dictionary structure.
-
-    keymatch should be a tuple (timestep, modelgridindex).
-    """
+def get_estimator_files(modelpath):
     estimfiles = (glob.glob(os.path.join(modelpath, 'estimators_????.out'), recursive=True) +
                   glob.glob(os.path.join(modelpath, 'estimators_????.out.gz'), recursive=True) +
                   glob.glob(os.path.join(modelpath, '*/estimators_????.out'), recursive=True) +
                   glob.glob(os.path.join(modelpath, '*/estimators_????.out.gz'), recursive=True))
 
+    return estimfiles
+
+
+def read_estimators(modelpath, modeldata, keymatch=None):
+    """Read estimator files into a nested dictionary structure.
+
+    keymatch should be a tuple (timestep, modelgridindex).
+    """
+    estimfiles = get_estimator_files(modelpath)
     if not estimfiles:
         print("No estimator files found")
         return False
