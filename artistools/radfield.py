@@ -17,6 +17,7 @@ from pathlib import Path
 
 import artistools as at
 import artistools.spectra
+import artistools.estimators
 
 # from PyPDF2 import PdfFileMerger
 
@@ -108,11 +109,21 @@ def j_nu_dbb(arr_nu_hz, W, T):
     return [0. for _ in arr_nu_hz]
 
 
-def plot_fitted_field(axis, radfielddata, xmin, xmax, modelgridindex=None, timestep=None, **plotkwargs):
+def get_estimators(modelpath):
+    modeldata, _ = at.get_modeldata(modelpath)
+    estimators = artistools.estimators.read_estimators(modelpath, modeldata)
+    return estimators
+
+
+def plot_fitted_field(axis, radfielddata, xmin, xmax, modelpath, args, modelgridindex=None, timestep=None, **plotkwargs):
     """Plot the fitted diluted blackbody for each bin as well as the global fit."""
     fittedxvalues = []
     fittedyvalues = []
     ymaxglobalfit = -1
+
+    if args.showTe:
+        estimators = get_estimators(modelpath)
+        Te = estimators[(timestep - 1, modelgridindex)]['Te']
 
     radfielddata_subset = radfielddata.copy().query(
         'bin_num >= -1' +
@@ -139,15 +150,26 @@ def plot_fitted_field(axis, radfielddata, xmin, xmax, modelgridindex=None, times
                 nu_lower = row['nu_lower']
                 nu_upper = row['nu_upper']
 
+            W = row['W']
+            T = row['T_R']
+
+            if args.showTe:
+                W = 1
+                T = Te
+
             arr_nu_hz = np.linspace(nu_lower, nu_upper, num=500)
-            arr_j_nu = j_nu_dbb(arr_nu_hz, row['W'], row['T_R'])
+            arr_j_nu = j_nu_dbb(arr_nu_hz, W, T)
 
             arr_lambda = const.c.to('angstrom/s').value / arr_nu_hz
             arr_j_lambda = arr_j_nu * arr_nu_hz / arr_lambda
 
             if row['bin_num'] == -1:
                 ymaxglobalfit = max(arr_j_lambda)
-                axis.plot(arr_lambda, arr_j_lambda, linewidth=1.5, color='purple', label='Full-spectrum fitted field')
+                if not args.showTe:
+                    axis.plot(arr_lambda, arr_j_lambda, linewidth=1.5, color='purple',
+                              label=f'Full-spectrum fitted field')
+                else:
+                    axis.plot(arr_lambda, arr_j_lambda, linewidth=1.5, color='purple', label=f'Full-spectrum fitted field at Te {Te}')
                 print(row)
             else:
                 fittedxvalues += list(arr_lambda)
@@ -234,7 +256,7 @@ def plot_celltimestep(
         axis, radfielddata, modelgridindex=modelgridindex, timestep=timestep, color='blue', linewidth=1.5)
 
     ymax2 = plot_fitted_field(
-        axis, radfielddata, xmin, xmax, modelgridindex=modelgridindex, timestep=timestep,
+        axis, radfielddata, xmin, xmax, modelpath, args, modelgridindex=modelgridindex, timestep=timestep,
         alpha=0.8, color='green', linewidth=1.5)
     c = const.c.to('angstrom/s').value
     ymax3 = plot_line_estimators(
@@ -439,6 +461,9 @@ def addargs(parser):
     parser.add_argument('-o', action='store', dest='outputfile', type=Path,
                         help='Filename for PDF file')
 
+    parser.add_argument('--showTe', action='store_true',
+                        help='Show blackbody at Te')
+
 
 def main(args=None, argsraw=None, **kwargs):
     """Plot the radiation field estimators."""
@@ -486,6 +511,8 @@ def main(args=None, argsraw=None, **kwargs):
 
         for modelgridindex in modelgridindexlist:
             radfielddata = read_files(sorted(radfield_files), modelgridindex)
+            if radfielddata is None:
+                continue
 
             if not specfilename.is_file():
                 print(f'Could not find {specfilename}')
