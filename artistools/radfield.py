@@ -153,7 +153,7 @@ def plot_fitted_field(axis, radfielddata, xmin, xmax, modelpath, args, modelgrid
             W = row['W']
             T = row['T_R']
 
-            if args.showTe:
+            if args.showTe and row['bin_num'] == -1:
                 W = 1
                 T = Te
 
