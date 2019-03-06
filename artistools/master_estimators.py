@@ -2,7 +2,7 @@ import artistools as at
 from pathlib import Path
 import gzip
 
-import artistools.estimators as est
+import artistools.estimators
 
 
 
@@ -48,7 +48,7 @@ def parse_ion_row_master(row, outdict):
 
 
 def read_master_estimators(modelpath, modeldata):
-    estimfiles = est.get_estimator_files(modelpath)
+    estimfiles = at.estimators.get_estimator_files(modelpath)
     if not estimfiles:
         print("No estimator files found")
         return False
