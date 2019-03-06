@@ -27,10 +27,9 @@ def get_atomic_composition(modelpath):
     return atomic_composition
 
 
-def parse_ion_row_master(row, outdict):
+def parse_ion_row_master(row, outdict, atomic_composition):
     outdict['populations'] = {}
 
-    atomic_composition = get_atomic_composition(modelpath)
     elements = atomic_composition.keys()
 
     i = 9
@@ -54,6 +53,7 @@ def read_master_estimators(modelpath, modeldata):
         return False
     print(f'Reading {len(estimfiles)} estimator files...')
 
+    atomic_composition = get_atomic_composition(modelpath)
     estimators = {}
     for estfile in estimfiles:
         opener = gzip.open if estfile.endswith('.gz') else open
@@ -75,7 +75,7 @@ def read_master_estimators(modelpath, modeldata):
                 estimators[(timestep, modelgridindex)]['W'] = float(row[3])
                 estimators[(timestep, modelgridindex)]['TJ'] = float(row[4])
 
-                parse_ion_row_master(row, estimators[(timestep, modelgridindex)])
+                parse_ion_row_master(row, estimators[(timestep, modelgridindex)], atomic_composition)
 
     return estimators
 
