@@ -5,10 +5,6 @@ import gzip
 import artistools.estimators
 
 
-
-modelpath = Path("/Users/ccollins/OneDrive - Queen's University Belfast/test_master/test_master_CO_WD")
-
-
 def get_atomic_composition(modelpath):
     """Read ion list from output file"""
     atomic_composition = {}
@@ -82,6 +78,8 @@ def read_master_estimators(modelpath, modeldata):
 
 
 def main():
+    modelpath = Path("/Users/ccollins/OneDrive - Queen's University Belfast/test_master/test_master_CO_WD")
+
     modeldata, _ = at.get_modeldata(Path(modelpath, 'model.txt'))
     estim = read_master_estimators(modelpath, modeldata)
 
