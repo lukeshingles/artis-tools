@@ -32,7 +32,7 @@ def parse_ion_row_master(row, outdict, atomic_composition):
 
     elements = atomic_composition.keys()
 
-    i = 9
+    i = 6
     for atomic_number in elements:
         for ion_stage in range(1, atomic_composition[atomic_number] + 1):
             value_thision = float(row[i])
@@ -84,8 +84,6 @@ def read_master_estimators(modelpath, modeldata):
 def main():
     modeldata, _ = at.get_modeldata(Path(modelpath, 'model.txt'))
     estim = read_master_estimators(modelpath, modeldata)
-    for cell in range(70):
-        print(estim[(30, cell)])
 
 if __name__ == '__main__':
     main()
