@@ -17,7 +17,8 @@ from typing import Iterable
 # import scipy.signal
 import numpy as np
 import pandas as pd
-# from astropy import constants as const
+from astropy import constants as const
+from astropy import units as u
 
 from PyPDF2 import PdfFileMerger
 
@@ -450,6 +451,36 @@ def firstexisting(filelist, path=Path('.')):
             return fullpath
 
     raise FileNotFoundError(f'None of these files exist: {", ".join([str(x) for x in fullpaths])}')
+
+
+def get_inputparams(modelpath):
+    """Return parameters specified in input.txt."""
+    params = {}
+    with Path(modelpath, 'input.txt').open('r') as inputfile:
+        params['pre_zseed'] = int(inputfile.readline())
+
+        # number of time steps
+        params['ntstep'] = int(inputfile.readline())
+
+        # number of start and end time step
+        params['itstep'], params['ftstep'] = [int(x) for x in inputfile.readline().split()]
+
+        params['tmin'], params['tmax'] = [int(x) for x in inputfile.readline().split()]
+
+        params['nusyn_min'], params['nusyn_max'] = [
+            (float(x) * u.MeV / const.h).to('Hz') for x in inputfile.readline().split()]
+
+        # number of times for synthesis
+        params['nsyn_time'] = int(inputfile.readline())
+
+        # start and end times for synthesis
+        params['nsyn_time_start'], params['nsyn_time_end'] = [float(x) for x in inputfile.readline().split()]
+
+        params['n_dimension'] = int(inputfile.readline())
+
+        # there are more parameters in the file that are not read yet...
+
+    return params
 
 
 def join_pdf_files(pdf_list, modelpath_list):
