@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 
 import artistools as at
+import artistools.master_estimators
 
 # from astropy import constants as const
 
@@ -274,7 +275,7 @@ def plot_multi_ion_series(
         if atomic_number != prev_atomic_number:
             linestyleindex += 1
 
-        if compositiondata.query('Z == @atomic_number '
+        if not args.masterbranch and compositiondata.query('Z == @atomic_number '
                                  '& lowermost_ionstage <= @ion_stage '
                                  '& uppermost_ionstage >= @ion_stage').empty:
             print(f"WARNING: Can't plot '{seriestype}' for Z={atomic_number} ion_stage {ion_stage} "
@@ -298,7 +299,7 @@ def plot_multi_ion_series(
         for modelgridindex in mgilist:
             estim = estimators[(timestep, modelgridindex)]
 
-            if estim['emptycell']:
+            if 'emptycell' in estim and estim['emptycell']:
                 continue
 
             if seriestype == 'populations':
@@ -603,6 +604,9 @@ def plot_gamma(estimators, timestep):
 
 
 def addargs(parser):
+    parser.add_argument('--masterbranch', action='store_true',
+                        help='Flag to show using output from master branch')
+
     parser.add_argument('-modelpath', default='.',
                         help='Path to ARTIS folder')
 
@@ -651,14 +655,19 @@ def main(args=None, argsraw=None, **kwargs):
     if os.path.isdir(args.outputfile):
         args.outputfile = os.path.join(args.outputfile, defaultoutputfile)
 
-    modelpath = args.modelpath
+    modelpath = Path(args.modelpath)
 
     modeldata, _ = at.get_modeldata(modelpath)
     abundancedata = at.get_initialabundances(modelpath)
-    compositiondata = at.get_composition_data(modelpath)
+    if args.masterbranch:
+        compositiondata = at.master_estimators.get_atomic_composition(modelpath)
+        estimators = at.master_estimators.read_master_estimators(modelpath, modeldata)
+    else:
+        compositiondata = at.get_composition_data(modelpath)
+        estimators = read_estimators(modelpath, modeldata)
     modelname = at.get_model_name(modelpath)
 
-    estimators = read_estimators(modelpath, modeldata)
+
 
     if not estimators:
         return -1
@@ -715,7 +724,8 @@ def main(args=None, argsraw=None, **kwargs):
         for timestep in range(timestepmin, timestepmax + 1):
 
             allnonemptymgilist = [modelgridindex for modelgridindex in modeldata.index
-                                  if not estimators[(timestep, modelgridindex)]['emptycell']]
+                                  if 'emptycell' not in estimators[(timestep, modelgridindex)]
+                                  or not estimators[(timestep, modelgridindex)]['emptycell']]
 
             # plot_corrphotoionrenorm(estimators, compositiondata, timestep, 50)
 
