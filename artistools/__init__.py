@@ -476,7 +476,7 @@ def get_inputparams(modelpath):
         # start and end times for synthesis
         params['nsyn_time_start'], params['nsyn_time_end'] = [float(x) for x in inputfile.readline().split()]
 
-        params['n_dimension'] = int(inputfile.readline())
+        params['n_dimensions'] = int(inputfile.readline())
 
         # there are more parameters in the file that are not read yet...
 
