@@ -116,29 +116,45 @@ def get_composition_data(filename):
 
 def get_modeldata(filename):
     """Return a list containing named tuples for all model grid cells."""
+    inputparams = get_inputparams(modelpath=filename)
     if os.path.isdir(filename):
         filename = firstexisting(['model.txt.gz', 'model.txt'], path=filename)
 
     modeldata = pd.DataFrame()
     gridcelltuple = namedtuple('gridcell', 'inputcellid velocity logrho X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48')
 
-    with open(filename, 'r') as fmodel:
-        gridcellcount = int(fmodel.readline())
-        t_model_init_days = float(fmodel.readline())
-        for line in fmodel:
-            row = line.split()
-            rowdf = pd.DataFrame([gridcelltuple._make([int(row[0])] + list(map(float, row[1:])))],
-                                 columns=gridcelltuple._fields)
-            modeldata = modeldata.append(rowdf, ignore_index=True)
+    if inputparams['n_dimensions'] == 1:
+        with open(filename, 'r') as fmodel:
+            gridcellcount = int(fmodel.readline())
+            t_model_init_days = float(fmodel.readline())
+            for line in fmodel:
+                row = line.split()
+                rowdf = pd.DataFrame([gridcelltuple._make([int(row[0])] + list(map(float, row[1:])))],
+                                     columns=gridcelltuple._fields)
+                modeldata = modeldata.append(rowdf, ignore_index=True)
 
-            # the model.txt file may contain more shells, but we should ignore them
-            # if we have already read in the specified number of shells
-            if len(modeldata) == gridcellcount:
-                break
+                # the model.txt file may contain more shells, but we should ignore them
+                # if we have already read in the specified number of shells
+                if len(modeldata) == gridcellcount:
+                    break
 
-    assert len(modeldata) <= gridcellcount
-    modeldata.index.name = 'cellid'
-    return modeldata, t_model_init_days
+        assert len(modeldata) <= gridcellcount
+        modeldata.index.name = 'cellid'
+        return modeldata, t_model_init_days
+
+    # elif inputparams['n_dimensions'] == 3:
+    #     with open(filename, 'r') as fmodel:
+    #         gridcellcount = int(fmodel.readline())
+    #         t_model_init_days = float(fmodel.readline())
+    #         vmax_in_cm_s = float(fmodel.readline())
+    #
+    #         for _ in range(gridcellcount):
+    #             cell, dum3, dum4, dum5, rho_model = [float(x) for x in (fmodel.readline().strip().split())]
+    #             ffe, fni, fco, f52fe, f48cr = [float(x) for x in (fmodel.readline().strip().split())]
+
+    else:
+        print("Error - can't read multi-D model yet")
+        exit()
 
 
 def save_modeldata(dfmodeldata, t_model_init_days, filename) -> None:
