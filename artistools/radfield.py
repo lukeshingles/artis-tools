@@ -195,7 +195,6 @@ def plot_fitted_field(axis, radfielddata, xmin, xmax, modelpath, args, modelgrid
 
             fittedxvalues += [const.c.to('angstrom/s').value / nu for nu in arr_nu_hz]
             fittedyvalues += list(arr_j_lambda)
-            print("HERE")
 
     if fittedxvalues:
         axis.plot(fittedxvalues, fittedyvalues, label='Fitted field', **plotkwargs)
