@@ -147,10 +147,10 @@ def get_modeldata(filename):
     #         gridcellcount = int(fmodel.readline())
     #         t_model_init_days = float(fmodel.readline())
     #         vmax_in_cm_s = float(fmodel.readline())
-    #
     #         for _ in range(gridcellcount):
-    #             cell, dum3, dum4, dum5, rho_model = [float(x) for x in (fmodel.readline().strip().split())]
-    #             ffe, fni, fco, f52fe, f48cr = [float(x) for x in (fmodel.readline().strip().split())]
+    #             cellpos_in = []
+    #             cell, cellpos_in[2], cellpos_in[1], cellpos_in[0], rho_model = [float(x) for x in (fmodel.readline().strip().split())]
+
 
     else:
         print("Error - can't read multi-D model yet")
