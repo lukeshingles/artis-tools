@@ -511,12 +511,21 @@ def make_spectrum_plot(modelpaths, axis, filterfunc, args, scale_to_peak=None):
 def make_emissionabsorption_plot(modelpath, axis, filterfunc, args, scale_to_peak=None):
     """Plot the emission and absorption by ion for an ARTIS model."""
     # emissionfilenames = ['emissiontrue.out.gz', 'emissiontrue.out', 'emission.out.gz', 'emission.out']
-    emissionfilenames = ['emissiontrue.out.gz', 'emissiontrue.out']
+    emissionfilenames = ['emissiontrue.out.gz', 'emissiontrue.out', 'emissionpol.out']
     emissionfilename = at.firstexisting(emissionfilenames, path=modelpath)
 
     specfilename = at.firstexisting(['spec.out.gz', 'spec.out', 'specpol.out'], path=modelpath)
+    master_branch = False
+    if Path(modelpath, 'specpol.out').is_file():
+        specfilename = Path(modelpath) / "specpol.out"
+        master_branch = True
+
     specdata = pd.read_csv(specfilename, delim_whitespace=True)
-    timearray = specdata.columns.values[1:]
+    if master_branch:
+        timearray = [i for i in specdata.columns.values[1:] if i[-2] != '.']
+    else:
+        timearray = specdata.columns.values[1:]
+
     arraynu = specdata.loc[:, '0'].values
     arraylambda_angstroms = const.c.to('angstrom/s').value / arraynu
 
