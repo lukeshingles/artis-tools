@@ -220,6 +220,7 @@ def read_specpol_res(modelpath, angle, args=None):
     """Return specpol_res data for a given angle"""
     if Path(modelpath, 'specpol_res.out').is_file():
         specfilename = Path(modelpath) / "specpol_res.out"
+        #print('line 214 in spectra read_specpol_res')
     else:
         specfilename = modelpath
 
@@ -234,10 +235,12 @@ def read_specpol_res(modelpath, angle, args=None):
         else:
             chunk = specdata.iloc[index_to_split[i]:, :]
         res_specdata.append(chunk)
-    # print(res_specdata[0])
+
 
     columns = res_specdata[0].iloc[0]
-    # print(columns)
+
+
+
     for i, res_spec in enumerate(res_specdata):
         res_specdata[i] = res_specdata[i].rename(columns=columns).drop(res_specdata[i].index[0])
         numberofIvalues = len(res_specdata[i].columns.drop_duplicates())
@@ -246,6 +249,7 @@ def read_specpol_res(modelpath, angle, args=None):
         res_specdata[i] = res_specdata[i].to_numpy()
 
     # Averages over 10 bins to reduce noise
+
 
     for start_bin in np.arange(start=0, stop=100, step=10):
         # print(start_bin)
@@ -258,6 +262,7 @@ def read_specpol_res(modelpath, angle, args=None):
         res_specdata[i] = pd.DataFrame(data=res_specdata[i], columns=columns[:numberofIvalues])
         res_specdata[i] = res_specdata[i].rename(columns={'0': 'nu'})
 
+
     return res_specdata
 
 
@@ -269,7 +274,9 @@ def get_res_spectrum(
     if timestepmax < 0:
         timestepmax = timestepmin
 
+
     # print(f"Reading spectrum at timestep {timestepmin}")
+
 
     if angle is None:
         angle = args.plotviewingangle[0]
@@ -279,6 +286,7 @@ def get_res_spectrum(
         res_specdata = read_specpol_res(modelpath, angle)
 
     nu = res_specdata[angle].loc[:, 'nu'].values
+    #print(nu, 'printing nu line 262 spectra get_res_spectrum')
     # if master_branch:
     timearray = [i for i in res_specdata[angle].columns.values[1:] if i[-2] != '.']
     # else:

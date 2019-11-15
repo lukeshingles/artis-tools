@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from astropy import constants as const
 from astropy import units as u
+from pandas.core.strings import str_replace
 
 import artistools as at
 import artistools.spectra
@@ -22,6 +23,8 @@ import matplotlib
 from extinction import apply, ccm89
 
 from scipy.interpolate import interp1d
+
+from artistools.hesma_magnitudes import get_hesma_magnitudes
 
 
 def readfile(filepath_or_buffer):
@@ -92,6 +95,29 @@ def make_lightcurve_plot(modelpaths, filenameout, frompackets=False, escape_type
     for seriesindex, modelpath in enumerate(modelpaths):
         modelname = at.get_model_name(modelpath)
         print(f"====> {modelname}")
+
+        #start of new bit im trying
+        #if args.plot_hesma_model:
+
+
+        if seriesindex == 0 and args.plot_hesma_model:
+            hesma_model = read_hesma_lightcurve(args)
+            linename = str(args.plot_hesma_model).split('_')[:3]
+            print(hesma_model, "printing hesma_model at line 108")
+            print(hesma_model.keys(), "printing hesma_model keys (needed at the top of file) at line 109")
+            linename = "_".join(linename)
+            print(linename, "printing line name")
+            plt.plot(hesma_model.t, hesma_model.luminosity/3.846e33, label=linename, color='c')
+
+
+
+        #linename = str(args.plot_hesma_model).split('_')[:3]
+        #linename = "_".join(linename)
+        #if linename not in linenames:
+            #linenames.append(linename)
+
+            #end of bit im trying
+
         lcname = 'gamma_light_curve.out' if (escape_type == 'TYPE_GAMMA' and not frompackets) else 'light_curve.out'
         try:
             lcpath = at.firstexisting([lcname + '.xz', lcname + '.gz', lcname], path=modelpath)
@@ -126,6 +152,7 @@ def make_lightcurve_plot(modelpaths, filenameout, frompackets=False, escape_type
         plotkwargs['label'] = f'{modelname} (cmf)'
         axis.plot(lcdata.time, lcdata['lum_cmf'], **plotkwargs)
 
+
     # axis.set_xlim(left=xminvalue, right=xmaxvalue)
     # axis.set_ylim(bottom=-0.1, top=1.3)
 
@@ -138,9 +165,19 @@ def make_lightcurve_plot(modelpaths, filenameout, frompackets=False, escape_type
     else:
         lum_suffix = r'_{\mathrm{' + escape_type.replace("_", r"\_") + '}}'
     axis.set_ylabel(r'$\mathrm{L} ' + lum_suffix + r'/ \mathrm{L}_\odot$')
+    # axis.set_xlim((0, 40))
+
+    #hesma_comparison_plot_filename = os.path.join("plotlightcurve" + "_" + linename)
+
+
 
     fig.savefig(str(filenameout), format='pdf')
     print(f'Saved {filenameout}')
+
+
+    # fig.savefig(str(hesma_comparison_plot_filename), format='pdf')
+    # print(f'Saved {hesma_comparison_plot_filename}')
+
     plt.close()
 
 
@@ -168,9 +205,11 @@ def get_magnitudes(modelpath, args, angle=None, modelnumber=None):
         args.filter = ['B']
 
     if args.filter[0] == 'bol':
+        print("in this bit line 207 bol")
         filters_dict['bol'] = [
             (time, bol_magnitude) for time, bol_magnitude in zip(timearray, bolometric_magnitude(modelpath, timearray, args, angle))
             if math.isfinite(bol_magnitude)]
+
     else:
         filters_list = args.filter
         # filters_list = ['B']
@@ -210,7 +249,7 @@ def get_magnitudes(modelpath, args, angle=None, modelnumber=None):
                 if phot_filtobs_sn != 0.0:
                     phot_filtobs_sn = phot_filtobs_sn - 25  # Absolute magnitude
                     filters_dict[filter_name].append((timearray[timestep], phot_filtobs_sn))
-
+    #print(filters_dict, "printing filters dict")
     return filters_dict
 
 
@@ -261,6 +300,9 @@ def get_spectrum_at_time(modelpath, timestep, time, args, angle=None, res_specda
         if args.plotvspecpol:
             spectrum = at.spectra.get_vspecpol_spectrum(modelpath, time, angle, args)
         else:
+
+            res_specdata = at.spectra.read_specpol_res(modelpath, angle=angle)
+
             spectrum = at.spectra.get_res_spectrum(modelpath, timestep, timestep, angle=angle,
                                                    res_specdata=res_specdata)
     else:
@@ -315,30 +357,36 @@ def make_magnitudes_plot(modelpaths, filternames_conversion_dict, outputfolder, 
 
     for index, angle in enumerate(angles):
         linenames = []
-
+        print(angle, 'angle line 346')
         for modelnumber, modelpath in enumerate(modelpaths):
 
             modelname = at.get_model_name(modelpath)
             linenames.append(modelname)
             print(f'Reading spectra: {modelname}')
+
+
             filters_dict = get_magnitudes(modelpath, args, angle, modelnumber=modelnumber)
+            if args.plot_hesma_model and modelnumber == 0:
+                hesma_filters_dict = get_hesma_magnitudes(modelpath, args)
 
-            if modelnumber == 0 and args.plot_hesma_model:
-                hesma_model = read_hesma_lightcurve(args)
-                linename = str(args.plot_hesma_model).split('_')[:3]
-                linename = "_".join(linename)
 
-                if linename not in linenames:
-                    linenames.append(linename)
 
             for plotnumber, key in enumerate(filters_dict):
                 time = []
                 magnitude = []
 
-                for t, mag in filters_dict[key]:
-                    time.append(float(t))
-                    magnitude.append(mag)
-                if args.plotvspecpol and angle is not None:
+                time_hesma = []
+                magnitude_hesma = []
+
+                for t, mag in filters_dict[key]:                            #adjusting plot range for artis simulation (x-axis)
+                    if float(t)<32.00:
+                        time.append(float(t))
+                        magnitude.append(mag)
+                if args.plot_hesma_model and modelnumber == 0:
+                    for t, mag in hesma_filters_dict[key]:
+                        time_hesma.append(float(t))
+                        magnitude_hesma.append(mag)
+                if args.plotvspecpol and angle != None:
                     vpkt_data = at.get_vpkt_data(modelpath)
                     viewing_angle = round(math.degrees(math.acos(vpkt_data['cos_theta'][angle])))
                     linelabel = fr"$\theta$ = {viewing_angle}"
@@ -350,14 +398,13 @@ def make_magnitudes_plot(modelpaths, filternames_conversion_dict, outputfolder, 
                 #     linelabel = args.label[modelnumber]
                 else:
                     linelabel = f'{modelname}'
-                    # linelabel = 'Angle averaged'
 
-                # if 'redshifttoz' in args and args.redshifttoz[modelnumber] != 0:
-                #     linestyle = '--'
-                # else:
-                #     linestyle = '-'
-                plt.plot(time, magnitude, label=linelabel, linewidth=3)
-                # plt.plot(time, magnitude, label=linelabel, linewidth=3, color='k', linestyle=':')
+                fig = plt.plot(time, magnitude, label=linelabel, linewidth=3)
+                if args.plot_hesma_model and modelnumber == 0:
+                    hesma_model_label = str(args.plot_hesma_model)
+                    hesma_model_lab=hesma_model_label.replace(".txt", " ")
+                    hesma_model_lab1=hesma_model_lab.replace("_", " ")
+                    plt.plot(time_hesma, magnitude_hesma, label=hesma_model_lab1, linewidth=3)
 
                 # UNCOMMENT TO ESTIMATE BAND MAXIMUM AND DELTAM15
                 # tmax = time[magnitude.index(min(magnitude))]
@@ -378,9 +425,9 @@ def make_magnitudes_plot(modelpaths, filternames_conversion_dict, outputfolder, 
                 # print(f'After 15 days ({time_after15days}) mag = {mag_after15days}')
                 # print(f'deltam15 = {min(magnitude) - mag_after15days}')
 
-                if modelnumber == 0 and args.plot_hesma_model and key in hesma_model.keys():
-                    plt.plot(hesma_model.t, hesma_model[key], color='black')
-
+                # if modelnumber == 0 and args.plot_hesma_model and key in hesma_model.keys():
+                #     plt.plot(hesma_model.t, hesma_model[key], color='black')
+                #
                 # axarr[plotnumber].axis([0, 60, -16, -19.5])
                 # plt.text(45, -19, key)
     if args.reflightcurves:
@@ -388,7 +435,6 @@ def make_magnitudes_plot(modelpaths, filternames_conversion_dict, outputfolder, 
         markers = args.refspecmarkers
         for i, reflightcurve in enumerate(args.reflightcurves):
             plot_lightcurve_from_data(filters_dict.keys(), reflightcurve, colours[i], markers[i], filternames_conversion_dict)
-
     plt.minorticks_on()
     plt.tick_params(axis='both', which='minor', top=True, right=True, length=5, width=2, labelsize=18)
     plt.tick_params(axis='both', which='major', top=True, right=True, length=8, width=2, labelsize=18)
@@ -404,11 +450,11 @@ def make_magnitudes_plot(modelpaths, filternames_conversion_dict, outputfolder, 
     if args.ymax is None:
         args.ymax = -20
     if args.ymin is None:
-        args.ymin = -14
+        args.ymin = -9
     if args.xmax is None:
-        args.xmax = 100
+        args.xmax = 45
     if args.xmin is None:
-        args.xmin = 5
+        args.xmin = 0
 
     plt.ylim(args.ymin, args.ymax)
     plt.xlim(args.xmin, args.xmax)
@@ -420,7 +466,8 @@ def make_magnitudes_plot(modelpaths, filternames_conversion_dict, outputfolder, 
     # f.set_figheight(8)
     # f.set_figwidth(7)
     if not args.nolegend:
-        plt.legend(loc='best', frameon=False, fontsize='xx-small', ncol=2, handlelength=1)
+
+        plt.legend(loc='best', frameon=True, fontsize='8')
     if len(filters_dict) == 1:
         args.outputfile = os.path.join(outputfolder, f'plot{key}lightcurves.pdf')
     plt.savefig(args.outputfile, format='pdf')
@@ -563,7 +610,8 @@ def read_lightcurve_data(lightcurvefilename):
     metadata = metadata_all.get(str(lightcurvefilename), {})
 
     data_path = os.path.join(at.PYDIR, f"data/lightcurves/{lightcurvefilename}")
-    lightcurve_data = pd.read_csv(data_path, comment='#')
+
+    lightcurve_data = pd.read_csv(data_path, delim_whitespace=True, comment='#')
     lightcurve_data['time'] = lightcurve_data['time'].apply(lambda x: x - (metadata['timecorrection']))
     # m - M = -5log(d) - 5  Get absolute magnitude
     lightcurve_data['magnitude'] = lightcurve_data['magnitude'].apply(lambda x: (
@@ -611,8 +659,8 @@ def plot_lightcurve_from_data(filter_names, lightcurvefilename, color, marker, f
             filter_data[filter_name]['magnitude'] = 2.5 * np.log10(
                 clightinangstroms / (filter_data[filter_name]['dered'] * lambda0 ** 2)) - 48.6
 
-        plt.plot(filter_data[filter_name]['time'], filter_data[filter_name]['magnitude'], marker,
-                 label=linename, color=color)
+
+
 
         # if linename == 'SN 2018byg':
         #     x_values = []
@@ -623,14 +671,19 @@ def plot_lightcurve_from_data(filter_names, lightcurvefilename, color, marker, f
         #         if row['date'] == 58252:
         #             plt.plot(row['time'], row['magnitude'], '*', label=linename, color=color)
         #         elif row['e_magnitude'] != -1:
+        #         if row['e_magnitude'] != -99.0:
         #             x_values.append(row['time'])
         #             y_values.append(row['magnitude'])
         #         else:
         #             limits_x.append(row['time'])
-        #             limits_y.append(row['magnitude'])
+        #             limits_y.append(row['magnitude'
         #     print(x_values, y_values)
         #     plt.plot(x_values, y_values, 'o', label=linename, color=color)
         #     plt.plot(limits_x, limits_y, 's', label=linename, color=color)
+
+        # else:
+
+        plt.plot(filter_data[filter_name]['time'], filter_data[filter_name]['magnitude'], marker, label=linename, color=color)
     return linename
 
 
@@ -758,10 +811,10 @@ def addargs(parser):
     parser.add_argument('-reflightcurves', type=str, nargs='+', dest='reflightcurves',
                         help='Also plot reference lightcurves from these files')
 
-    parser.add_argument('-refspeccolors', default=['0.0', '0.3', '0.5'], nargs='*',
+    parser.add_argument('-refspeccolors', default=['0.0', '0.3', '0.5', 'r'], nargs='*',
                         help='Set a list of color for reference spectra')
 
-    parser.add_argument('-refspecmarkers', default=['.', 'h', 's'], nargs='*',
+    parser.add_argument('-refspecmarkers', default=['.', 'h', 's', 'v'], nargs='*',
                         help='Set a list of markers for reference spectra')
 
     parser.add_argument('-filtersavgol', nargs=2,

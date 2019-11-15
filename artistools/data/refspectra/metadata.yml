@@ -210,3 +210,21 @@ SN2013cs_20140325_3Ang.txt:  # (Maguire et al. 2016)
   dist_mpc: 546.5
   z: 0.11737
 #  scale_factor: 2.5
+
+N1_deflag_9.25_days_since_explosion.dat:
+  label: 'N1 9.25 days since explosion'
+  t: 0
+  dist_mpc: 0.00001
+  scale_factor: 0.429
+
+N1_deflag_15.49_days_since_explosion.dat:
+  label: 'N1 15.49 days since explosion'
+  t: 0
+  dist_mpc: 0.00001
+  #scale_factor: 0.429
+
+N1_deflag_25.03_days_since_explosion.dat:
+  label: 'N1 25.03 days since explosion'
+  t: 0
+  dist_mpc: 0.00001
+  #scale_factor: 0.429
